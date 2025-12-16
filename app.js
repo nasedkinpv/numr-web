@@ -194,7 +194,8 @@ async function init() {
 
     // Load saved document (or show example if empty)
     const saved = localStorage.getItem(STORAGE_KEY);
-    jar.updateCode(saved !== null ? saved : EXAMPLE_CONTENT);
+    console.log('saved:', saved, 'using example:', !saved);
+    jar.updateCode(saved || EXAMPLE_CONTENT);
 
     // Listen for changes
     jar.onUpdate(() => evaluate());
