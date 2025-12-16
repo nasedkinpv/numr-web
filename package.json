@@ -1,0 +1,21 @@
+{
+  "name": "numr-web",
+  "version": "0.2.1",
+  "description": "Web interface for numr calculator",
+  "type": "module",
+  "scripts": {
+    "clean": "rm -rf pkg",
+    "build:core": "PATH=\"$HOME/.cargo/bin:$PATH\" wasm-pack build ../crates/numr-core --target web --out-dir ../../numr-web/pkg/core --features wasm",
+    "build:editor": "PATH=\"$HOME/.cargo/bin:$PATH\" wasm-pack build ../crates/numr-editor --target web --out-dir ../../numr-web/pkg/editor --features wasm",
+    "build:wasm": "npm run build:core && npm run build:editor",
+    "build": "npm run clean && npm run build:wasm",
+    "serve": "python3 -m http.server 8080",
+    "start": "npm run build && npm run serve"
+  },
+  "keywords": ["calculator", "wasm", "webassembly", "numr"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nasedkinpv/numr-web"
+  }
+}

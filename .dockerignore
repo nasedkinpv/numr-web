@@ -1,0 +1,9 @@
+.git
+.gitignore
+.dockerignore
+Dockerfile
+README.md
+package.json
+build.sh
+node_modules
+*.md

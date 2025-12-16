@@ -1,0 +1,13 @@
+# OS
+.DS_Store
+
+# Node (if any local dev)
+node_modules/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Build artifacts (keep pkg/ for deployment!)
+# pkg/ is NOT ignored - WASM binaries are committed

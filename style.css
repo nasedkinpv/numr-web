@@ -1,0 +1,318 @@
+/**
+ * numr web - Calculator Stylesheet
+ *
+ * Layout: Header | Main (3-col) | Footer
+ * Main: LineNumbers | Editor | Results
+ *
+ * Key design decisions:
+ * - No line wrapping: guarantees 1 line = 1 row alignment
+ * - Monospace font: consistent character width
+ * - Fixed line-height: all columns stay aligned
+ */
+
+:root {
+    /* Cool muted palette */
+    --bg-primary: #1a1c1e;
+    --bg-secondary: #1f2225;
+    --bg-tertiary: #2a2e32;
+    --text-primary: #e8eaed;
+    --text-secondary: #a8adb3;
+    --text-muted: #6b7280;
+    --accent: #a8b4f4;        /* Pale blue */
+    --accent-alt: #c4b5fd;    /* Pale lavender */
+    --success: #7dd3a8;       /* Cool mint */
+    --error: #f4a8a8;         /* Pale rose */
+    --border: #2a2e32;
+
+    /* Modern monospace font stack - system fonts first for performance */
+    --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, 'Cascadia Code', 'Consolas', 'Liberation Mono', Menlo, Monaco, monospace;
+    --font-size: clamp(0.75rem, 1.2vw + 0.4rem, 0.875rem);  /* 12px-14px, fluid */
+    --line-height: 1.5em;  /* Relative to font-size */
+    --padding: 0.5rem;
+}
+
+/* Reset */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: var(--font-mono);
+    font-size: var(--font-size);
+    line-height: var(--line-height);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    height: 100vh;
+    height: 100dvh;  /* Dynamic viewport height - better mobile support */
+}
+
+/* Main container: flex column */
+.container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Header */
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 2rem;
+    padding: 0.25rem 0.5rem;
+    padding-right: calc(0.5rem + 8px);  /* Account for scrollbar width */
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    margin-left: 0.25rem;
+}
+
+.logo img {
+    height: 14px;
+    width: auto;
+}
+
+/* Shimmer effect container */
+.logo a, .logo {
+    position: relative;
+}
+
+.logo::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        transparent 45%,
+        #4ade80 48%,
+        #22d3ee 50%,
+        #4ade80 52%,
+        transparent 55%,
+        transparent 100%
+    );
+    background-size: 400% 100%;
+    mix-blend-mode: screen;
+    opacity: 0.8;
+    animation: crt-shimmer 8s ease-in-out infinite;
+    pointer-events: none;
+    mask-image: url('NUMR.svg');
+    mask-size: contain;
+    mask-repeat: no-repeat;
+    mask-position: center;
+    -webkit-mask-image: url('NUMR.svg');
+    -webkit-mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+}
+
+@keyframes crt-shimmer {
+    0%, 100% {
+        background-position: 200% 0;
+        opacity: 0;
+    }
+    10% { opacity: 0.6; }
+    50% {
+        background-position: -200% 0;
+        opacity: 0.9;
+    }
+    90% { opacity: 0.6; }
+}
+
+.actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.actions button {
+    background: transparent;
+    color: var(--text-muted);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.actions button:hover {
+    color: var(--accent);
+}
+
+.actions button svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* Rates button states */
+#btn-rates.loading {
+    opacity: 0.7;
+    cursor: wait;
+}
+
+#btn-rates.loading svg {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+#btn-rates.success {
+    color: var(--success);
+}
+
+#btn-rates.error {
+    color: var(--error);
+}
+
+/* Main: single scroll container */
+.scroll-wrapper {
+    flex: 1;
+    overflow-y: auto;                  /* Vertical scroll for all columns */
+    overflow-x: hidden;                /* No horizontal scroll on wrapper */
+    -webkit-overflow-scrolling: auto;
+    overscroll-behavior: none;
+    scrollbar-gutter: stable;
+}
+
+/* Editor grid: 3-column layout */
+.editor-grid {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    min-height: 100%;
+}
+
+/* Gutters: line numbers (left) and results (right) */
+.gutter {
+    background: var(--bg-secondary);
+    padding: 0.5rem;
+    padding-bottom: 0;
+}
+
+#line-numbers {
+    background: var(--bg-primary);
+    border-right: 1px solid var(--border);
+    text-align: right;
+    color: var(--text-muted);
+    user-select: none;
+    font-family: var(--font-mono);
+    min-width: calc(2ch + 14px + 1rem);  /* 2 digits + error bullet + padding */
+}
+
+#results {
+    background: var(--bg-primary);
+    border-left: 1px solid var(--border);
+    text-align: right;
+    min-width: 8rem;
+}
+
+/* Each line in gutter */
+.gutter .line {
+    height: var(--line-height);
+    white-space: nowrap;
+}
+
+/* Error bullet in line numbers (like VS Code linting) */
+#line-numbers .line.error {
+    color: var(--error);
+    cursor: help;
+    position: relative;
+}
+
+#line-numbers .line.error .error-bullet {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 6px;
+    height: 6px;
+    background: var(--error);
+    border-radius: 50%;
+}
+
+#line-numbers .line.error {
+    padding-left: 10px;
+}
+
+/* Editor: CodeJar contenteditable */
+.editor {
+    background: var(--bg-primary);
+    padding: 0.5rem;
+    padding-bottom: 0;
+    font-family: var(--font-mono);
+    font-size: var(--font-size);
+    line-height: var(--line-height);
+    tab-size: 2;
+    white-space: pre !important;        /* NO WRAP - critical for alignment */
+    word-wrap: normal !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+    overflow-x: auto;                   /* Horizontal scroll for long lines */
+    min-width: 0;                       /* Allow shrinking in grid for overflow to work */
+    outline: none;
+    caret-color: var(--accent);
+    cursor: text;
+    min-height: 100%;
+}
+
+/* Ensure CodeJar inner elements don't wrap */
+.editor * {
+    white-space: pre !important;
+}
+
+/* Selection styling */
+.editor::selection,
+.editor *::selection {
+    background: rgba(174, 159, 242, 0.25);
+}
+
+/* Focus state - no visible border, editor blends with gutters */
+.editor:focus {
+    box-shadow: none;
+}
+
+/* All columns scroll together via single scroll-wrapper - no JS sync needed */
+
+/* Token colors for syntax highlighting - warm punchy Monokai */
+.token-number { color: #b898f4; }      /* Vibrant lavender */
+.token-operator { color: #f47898; }    /* Punchy pink */
+.token-variable { color: #f4a860; }    /* Vibrant peach */
+.token-unit { color: #b898f4; }        /* Vibrant lavender */
+.token-currency { color: #f4c244; }    /* Bright gold */
+.token-keyword { color: #f47898; }     /* Punchy pink */
+.token-function { color: #f4c244; }    /* Bright gold */
+.token-comment { color: #7d7868; font-style: italic; }
+.token-text { color: #f4e878; }        /* Bright yellow */
+.token-punctuation { color: #a8a498; }
+
+/* Footer */
+footer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    min-height: 2rem;
+    padding: 0.25rem 0.5rem;
+    padding-right: calc(0.5rem + 8px);  /* Account for scrollbar width */
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.total-label { color: var(--text-muted); }
+.total-value { color: var(--success); font-weight: 500; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-secondary); }
+::-webkit-scrollbar-thumb { background: var(--border); }
+

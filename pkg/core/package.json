@@ -1,0 +1,17 @@
+{
+  "name": "numr-core",
+  "type": "module",
+  "description": "Core calculation engine for numr - expression parsing, evaluation, and unit handling",
+  "version": "0.2.1",
+  "license": "MIT",
+  "files": [
+    "numr_core_bg.wasm",
+    "numr_core.js",
+    "numr_core.d.ts"
+  ],
+  "main": "numr_core.js",
+  "types": "numr_core.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
