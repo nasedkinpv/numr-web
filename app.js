@@ -23,6 +23,29 @@ const RATES_KEY = 'numr-rates';
 const RATES_TIMESTAMP_KEY = 'numr-rates-timestamp';
 const RATES_CACHE_TTL = 60 * 60 * 1000; // 1 hour
 
+// Example content shown when localStorage is empty
+const EXAMPLE_CONTENT = `# Quick calculations
+100 + 50
+* 2                        // continuation from previous
+_ / 3                      // _ references previous result
+
+# Variables
+price = 49.99
+quantity = 3
+total = price * quantity
++ 15%                      // add tax
+
+# Unit conversions
+42 km to miles
+100 F to C
+2.5 hours to minutes
+
+# Currency (live rates)
+1000 USD in EUR
+0.1 BTC in USD
+`;
+
+
 // Cryptocurrency IDs for CoinGecko API
 const CRYPTO_IDS = {
     BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana', USDT: 'tether',
@@ -169,9 +192,9 @@ async function init() {
         },
     });
 
-    // Load saved document
-    const saved = localStorage.getItem(STORAGE_KEY) || '';
-    jar.updateCode(saved);
+    // Load saved document (or show example if empty)
+    const saved = localStorage.getItem(STORAGE_KEY);
+    jar.updateCode(saved !== null ? saved : EXAMPLE_CONTENT);
 
     // Listen for changes
     jar.onUpdate(() => evaluate());
