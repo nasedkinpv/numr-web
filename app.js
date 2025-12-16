@@ -12,7 +12,7 @@
 
 import initCore, { WasmEngine } from './pkg/core/numr_core.js';
 import initEditor, { tokenize } from './pkg/editor/numr_editor.js';
-import { CodeJar } from 'https://esm.sh/codejar@4';
+import { CodeJar } from 'https://esm.sh/codejar@4.3.0';
 
 // ============================================================================
 // Constants

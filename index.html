@@ -24,7 +24,13 @@
     <meta name="theme-color" content="#1a1a2e">
 
     <link rel="stylesheet" href="style.css">
-    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Preload critical resources -->
+    <link rel="preload" href="/pkg/core/numr_core_bg.wasm" as="fetch" crossorigin>
+    <link rel="preload" href="/pkg/editor/numr_editor_bg.wasm" as="fetch" crossorigin>
+    <link rel="modulepreload" href="https://esm.sh/codejar@4.3.0">
+
+    <script defer src="https://unpkg.com/lucide@0.561.0/dist/umd/lucide.min.js"></script>
     <script defer src="https://umami.beneric.studio/script.js" data-website-id="20c5159f-decb-4b96-9e87-37133a60698d"></script>
 </head>
 <body>
@@ -56,6 +62,6 @@
         </footer>
     </div>
 
-    <script type="module" src="app.js?v=13182"></script>
+    <script type="module" src="app.js?v=13186"></script>
 </body>
 </html>
