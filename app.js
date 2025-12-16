@@ -159,6 +159,7 @@ async function fetchRates() {
  * Main initialization - called on page load
  */
 async function init() {
+    console.log('init() started');
     // Cache DOM references
     $.editor = document.getElementById('editor');
     $.lineNumbers = document.getElementById('line-numbers');
@@ -171,6 +172,7 @@ async function init() {
     $.fileInput = document.getElementById('file-input');
 
     // Initialize WASM (includes rate fetching)
+    console.log('before initWasm');
     try {
         await initWasm();
     } catch (e) {
@@ -178,6 +180,7 @@ async function init() {
         $.editor.textContent = '# Error: Failed to load calculator engine.\n# Please refresh the page.';
         return;
     }
+    console.log('after initWasm');
 
     // Initialize CodeJar with syntax highlighting
     jar = CodeJar($.editor, highlight, {
