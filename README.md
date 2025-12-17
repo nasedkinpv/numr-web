@@ -2,6 +2,57 @@
 
 Web interface for the numr calculator, powered by WebAssembly.
 
+## Web Component
+
+Use `<numr-calculator>` anywhere:
+
+```html
+<script type="module" src="https://numr.cc/numr-calculator.js"></script>
+
+<numr-calculator></numr-calculator>
+```
+
+### Attributes
+
+| Attribute | Description |
+|-----------|-------------|
+| `content` | Initial content |
+| `minimal` | Hide header/footer |
+| `readonly` | Non-editable |
+| `norates` | Skip exchange rate fetching |
+| `autosave` | Persist to localStorage |
+| `storage-key` | Custom localStorage key |
+| `base-path` | Custom WASM path |
+
+### Events
+
+- `numr-ready` - WASM initialized
+- `numr-change` - Content changed (detail: `{ content, results, totals }`)
+
+### Methods
+
+```js
+const calc = document.querySelector('numr-calculator');
+calc.getContent();     // Get content
+calc.setContent('..'); // Set content
+calc.clear();          // Clear
+calc.refreshRates();   // Refresh exchange rates
+calc.focus();          // Focus editor
+```
+
+### Theming
+
+```css
+numr-calculator {
+  --numr-bg-primary: #1a1c1e;
+  --numr-bg-secondary: #1f2225;
+  --numr-text-primary: #e8eaed;
+  --numr-accent: #a8b4f4;
+  --numr-success: #7dd3a8;
+  --numr-error: #f4a8a8;
+}
+```
+
 ## Quick Start
 
 ```bash
@@ -51,13 +102,16 @@ npm run build
 
 ```
 numr-web/
-├── index.html      # Main HTML page
-├── style.css       # Styling
-├── app.js          # Application
-├── Dockerfile      # Docker deployment
-├── nginx.conf      # Nginx config
-├── pkg/            # WASM binaries (committed)
-│   ├── core/       # numr-core WASM
-│   └── editor/     # numr-editor WASM
-└── build.sh        # WASM build script
+├── index.html           # Main app
+├── numr-calculator.js   # Web component
+├── numr-calculator.d.ts # TypeScript types
+├── demo.html            # Component demo
+├── app.js               # Main app logic
+├── style.css            # Styles
+├── pkg/                 # WASM binaries
+│   ├── core/            # numr-core
+│   └── editor/          # numr-editor
+├── Dockerfile
+├── nginx.conf
+└── build.sh
 ```
