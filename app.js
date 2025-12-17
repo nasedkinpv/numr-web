@@ -229,13 +229,29 @@ function highlight(editor) {
         return;
     }
 
+    // Get known variable names for enhanced highlighting
+    const knownVars = getKnownVariables();
+
     const lines = code.split('\n');
     const html = lines.map((line, i) => {
         if (!line) return i < lines.length - 1 ? '\n' : '';
-        return renderTokens(line) + (i < lines.length - 1 ? '\n' : '');
+        return renderTokens(line, knownVars) + (i < lines.length - 1 ? '\n' : '');
     }).join('');
 
     editor.innerHTML = html || '\n';
+}
+
+/**
+ * Get set of known variable names from engine
+ */
+function getKnownVariables() {
+    if (!engine) return null;
+    try {
+        const vars = JSON.parse(engine.get_variables());
+        return new Set(vars.map(v => v.name));
+    } catch {
+        return null;
+    }
 }
 
 // ============================================================================
@@ -387,17 +403,23 @@ function escapeHtml(text) {
 
 /**
  * Render tokens as syntax-highlighted HTML
+ * Enhances tokenization by highlighting known variable references
  */
-function renderTokens(text) {
+function renderTokens(text, knownVars = null) {
     if (!text || !tokenizeFn) return escapeHtml(text);
 
     try {
         const tokens = JSON.parse(tokenizeFn(text));
         let html = '';
         for (const t of tokens) {
-            html += t.token_type === 'whitespace'
+            // Promote "text" tokens to "variable" if they match a known variable
+            let type = t.token_type;
+            if (type === 'text' && knownVars?.has(t.text)) {
+                type = 'variable';
+            }
+            html += type === 'whitespace'
                 ? escapeHtml(t.text)
-                : `<span class="token-${t.token_type}">${escapeHtml(t.text)}</span>`;
+                : `<span class="token-${type}">${escapeHtml(t.text)}</span>`;
         }
         return html || escapeHtml(text);
     } catch {
