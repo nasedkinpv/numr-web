@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>numr-calculator Web Component Demo</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family: system-ui, sans-serif;
+                background: #0f0f0f;
+                color: #e0e0e0;
+                padding: 2rem;
+                min-height: 100vh;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+                margin-bottom: 0.5rem;
+                color: #a8b4f4;
+            }
+
+            p {
+                color: #888;
+                margin-bottom: 2rem;
+            }
+
+            .demos {
+                display: grid;
+                gap: 2rem;
+                max-width: 1400px;
+                margin: 0 auto;
+            }
+
+            .demo {
+                background: #1a1a1a;
+                border-radius: 8px;
+                overflow: hidden;
+            }
+
+            .demo-title {
+                padding: 0.75rem 1rem;
+                background: #222;
+                font-size: 0.875rem;
+                font-weight: 500;
+                color: #aaa;
+                border-bottom: 1px solid #333;
+            }
+
+            .demo-content {
+                height: 400px;
+            }
+
+            .demo-content numr-calculator {
+                height: 100%;
+            }
+
+            h2 {
+                font-size: 1.25rem;
+                color: #a8b4f4;
+            }
+
+            /* Example: Custom themed calculator */
+            .themed-calculator {
+                --numr-bg-primary: #1e1e2e;
+                --numr-bg-secondary: #181825;
+                --numr-accent: #cba6f7;
+                --numr-success: #a6e3a1;
+                --numr-error: #f38ba8;
+                --numr-border: #313244;
+            }
+
+            code {
+                background: #333;
+                padding: 0.25rem 0.5rem;
+                border-radius: 4px;
+                font-size: 0.875rem;
+            }
+
+            .code-block {
+                background: #1a1a1a;
+                border: 1px solid #333;
+                border-radius: 8px;
+                padding: 1rem;
+                margin: 1rem 0;
+                overflow-x: auto;
+            }
+
+            pre {
+                font-family: ui-monospace, monospace;
+                font-size: 0.875rem;
+                line-height: 1.5;
+            }
+
+            .grid-2 {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+                gap: 2rem;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>&lt;numr-calculator&gt; Web Component</h1>
+        <p>
+            A portable calculator widget. Embed anywhere with a single import.
+        </p>
+
+        <div class="code-block">
+            <pre>
+&lt;script type="module" src="numr-calculator.js"&gt;&lt;/script&gt;
+&lt;numr-calculator&gt;&lt;/numr-calculator&gt;</pre
+            >
+        </div>
+
+        <div class="demos">
+            <div class="grid-2">
+                <!-- Default -->
+                <div class="demo">
+                    <div class="demo-title">Default</div>
+                    <div class="demo-content">
+                        <numr-calculator></numr-calculator>
+                    </div>
+                </div>
+
+                <!-- Minimal mode -->
+                <div class="demo">
+                    <div class="demo-title">
+                        Minimal (no header/footer):
+                        <code>&lt;numr-calculator minimal&gt;</code>
+                    </div>
+                    <div class="demo-content">
+                        <numr-calculator minimal></numr-calculator>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Custom themed -->
+            <div class="demo">
+                <div class="demo-title">
+                    Custom Theme (Catppuccin Mocha via CSS variables)
+                </div>
+                <div class="demo-content">
+                    <numr-calculator
+                        class="themed-calculator"
+                        content="# Catppuccin themed
+price = 29.99
+qty = 5
+subtotal = price * qty
+tax = subtotal * 8%
+total = subtotal + tax
+"
+                    ></numr-calculator>
+                </div>
+            </div>
+        </div>
+
+        <div class="demos">
+            <div class="grid-2">
+                <!-- Readonly -->
+                <div class="demo">
+                    <div class="demo-title">
+                        Readonly: <code>&lt;numr-calculator readonly&gt;</code>
+                    </div>
+                    <div class="demo-content">
+                        <numr-calculator
+                            readonly
+                            minimal
+                            content="# Embed in docs (non-editable)
+distance = 42 km
+time = 2.5 hours
+speed = distance / time
+"
+                        ></numr-calculator>
+                    </div>
+                </div>
+
+                <!-- With autosave -->
+                <div class="demo">
+                    <div class="demo-title">
+                        Autosave: <code>&lt;numr-calculator autosave&gt;</code>
+                    </div>
+                    <div class="demo-content">
+                        <numr-calculator
+                            autosave
+                            storage-key="demo-autosave"
+                            minimal
+                            content="# Edit me - I persist!
+x = 100
+y = 200
+x + y
+"
+                        ></numr-calculator>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h2 style="margin-top: 3rem; margin-bottom: 1rem">Usage Examples</h2>
+
+        <div class="code-block">
+            <pre><span style="color:#7d7868">// Basic embed</span>
+&lt;numr-calculator&gt;&lt;/numr-calculator&gt;
+
+<span style="color:#7d7868">// With initial content</span>
+&lt;numr-calculator content="100 + 50\n* 2"&gt;&lt;/numr-calculator&gt;
+
+<span style="color:#7d7868">// Minimal mode (no header/footer)</span>
+&lt;numr-calculator minimal&gt;&lt;/numr-calculator&gt;
+
+<span style="color:#7d7868">// Readonly (for embedding examples)</span>
+&lt;numr-calculator readonly&gt;&lt;/numr-calculator&gt;
+
+<span style="color:#7d7868">// Skip exchange rate fetching</span>
+&lt;numr-calculator norates&gt;&lt;/numr-calculator&gt;
+
+<span style="color:#7d7868">// Auto-save to localStorage</span>
+&lt;numr-calculator autosave&gt;&lt;/numr-calculator&gt;
+
+<span style="color:#7d7868">// Multiple instances with separate storage</span>
+&lt;numr-calculator autosave storage-key="calc-1"&gt;&lt;/numr-calculator&gt;
+&lt;numr-calculator autosave storage-key="calc-2"&gt;&lt;/numr-calculator&gt;
+
+<span style="color:#7d7868">// Custom WASM path (for CDN hosting)</span>
+&lt;numr-calculator base-path="/assets/numr"&gt;&lt;/numr-calculator&gt;
+
+<span style="color:#7d7868">// Listen to events</span>
+&lt;numr-calculator id="calc"&gt;&lt;/numr-calculator&gt;
+&lt;script&gt;
+  document.getElementById('calc').addEventListener('numr-change', (e) => {
+    console.log(e.detail.content);  // Current content
+    console.log(e.detail.results);  // Evaluation results
+    console.log(e.detail.totals);   // Running totals
+  });
+&lt;/script&gt;
+
+<span style="color:#7d7868">// Programmatic API</span>
+const calc = document.querySelector('numr-calculator');
+calc.setContent('10 + 20');
+calc.getContent();     // "10 + 20"
+calc.clear();          // Clear document
+calc.refreshRates();   // Fetch fresh exchange rates
+calc.focus();          // Focus the editor</pre>
+        </div>
+
+        <h2 style="margin-top: 2rem; margin-bottom: 1rem">
+            CSS Custom Properties
+        </h2>
+
+        <div class="code-block">
+            <pre>
+numr-calculator {
+  --numr-bg-primary: #1a1c1e;
+  --numr-bg-secondary: #1f2225;
+  --numr-text-primary: #e8eaed;
+  --numr-text-secondary: #a8adb3;
+  --numr-text-muted: #6b7280;
+  --numr-accent: #a8b4f4;
+  --numr-success: #7dd3a8;
+  --numr-error: #f4a8a8;
+  --numr-border: #2a2e32;
+  --numr-font: ui-monospace, monospace;
+  --numr-font-size: 14px;
+  --numr-line-height: 1.5em;
+}</pre
+            >
+        </div>
+
+        <script type="module" src="numr-calculator.js"></script>
+    </body>
+</html>
