@@ -287,7 +287,7 @@ header {
 .token-number { color: #b898f4; }      /* Vibrant lavender */
 .token-operator { color: #f47898; }    /* Punchy pink */
 .token-variable { color: #f4a860; }    /* Vibrant peach */
-.token-unit { color: #98d8b8; }        /* Soft sage */
+.token-unit { color: #A8B4F4; }        /* Soft blue-lavender */
 .token-currency { color: #f4c244; }    /* Bright gold */
 .token-keyword { color: #f47898; }     /* Punchy pink */
 .token-function { color: #f4c244; }    /* Bright gold */
