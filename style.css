@@ -213,7 +213,9 @@ header {
     background: var(--bg-primary);
     border-left: 1px solid var(--border);
     text-align: right;
-    min-width: 8rem;
+    width: max-content;
+    padding-left: 1rem;
+    padding-right: 1rem;
 }
 
 /* Each line in gutter */
