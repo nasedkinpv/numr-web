@@ -34,6 +34,7 @@ import { CodeJar } from "https://esm.sh/codejar@4.3.0";
 // Constants
 // ============================================================================
 
+const VERSION = "0.3.1";
 const STORAGE_KEY = "numr-document";
 const RATES_KEY = "numr-rates";
 const RATES_TIMESTAMP_KEY = "numr-rates-timestamp";
@@ -344,12 +345,13 @@ async function loadWasm(basePath = "") {
   if (wasmPromise) return wasmPromise;
 
   wasmPromise = (async () => {
+    const v = `?v=${VERSION}`;
     const corePath = basePath
-      ? `${basePath}/pkg/core/numr_core.js`
-      : "./pkg/core/numr_core.js";
+      ? `${basePath}/pkg/core/numr_core.js${v}`
+      : `./pkg/core/numr_core.js${v}`;
     const editorPath = basePath
-      ? `${basePath}/pkg/editor/numr_editor.js`
-      : "./pkg/editor/numr_editor.js";
+      ? `${basePath}/pkg/editor/numr_editor.js${v}`
+      : `./pkg/editor/numr_editor.js${v}`;
 
     const [coreModule, editorModule] = await Promise.all([
       import(corePath),
