@@ -134,36 +134,33 @@ export class WasmEngine {
         wasm.__wbg_wasmengine_free(ptr, 0);
     }
     /**
-     * Create a new engine instance
-     */
-    constructor() {
-        const ret = wasm.wasmengine_new();
-        this.__wbg_ptr = ret >>> 0;
-        WasmEngineFinalization.register(this, this.__wbg_ptr, this);
-        return this;
-    }
-    /**
-     * Evaluate a single line and return the result as a JSON string
-     * @param {string} input
+     * Get grouped totals as JSON
      * @returns {string}
      */
-    eval(input) {
-        let deferred2_0;
-        let deferred2_1;
+    get_totals() {
+        let deferred1_0;
+        let deferred1_1;
         try {
             const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-            const ptr0 = passStringToWasm0(input, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
-            const len0 = WASM_VECTOR_LEN;
-            wasm.wasmengine_eval(retptr, this.__wbg_ptr, ptr0, len0);
+            wasm.wasmengine_get_totals(retptr, this.__wbg_ptr);
             var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
             var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-            deferred2_0 = r0;
-            deferred2_1 = r1;
+            deferred1_0 = r0;
+            deferred1_1 = r1;
             return getStringFromWasm0(r0, r1);
         } finally {
             wasm.__wbindgen_add_to_stack_pointer(16);
-            wasm.__wbindgen_export(deferred2_0, deferred2_1, 1);
+            wasm.__wbindgen_export(deferred1_0, deferred1_1, 1);
         }
+    }
+    /**
+     * Apply exchange rates from JSON object: {"EUR": 0.92, "BTC": 95000, ...}
+     * @param {string} rates_json
+     */
+    apply_rates(rates_json) {
+        const ptr0 = passStringToWasm0(rates_json, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.wasmengine_apply_rates(this.__wbg_ptr, ptr0, len0);
     }
     /**
      * Evaluate without storing the result (for live preview)
@@ -212,26 +209,6 @@ export class WasmEngine {
         }
     }
     /**
-     * Get grouped totals as JSON
-     * @returns {string}
-     */
-    get_totals() {
-        let deferred1_0;
-        let deferred1_1;
-        try {
-            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-            wasm.wasmengine_get_totals(retptr, this.__wbg_ptr);
-            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-            deferred1_0 = r0;
-            deferred1_1 = r1;
-            return getStringFromWasm0(r0, r1);
-        } finally {
-            wasm.__wbindgen_add_to_stack_pointer(16);
-            wasm.__wbindgen_export(deferred1_0, deferred1_1, 1);
-        }
-    }
-    /**
      * Get all variables as JSON
      * @returns {string}
      */
@@ -252,19 +229,42 @@ export class WasmEngine {
         }
     }
     /**
+     * Create a new engine instance
+     */
+    constructor() {
+        const ret = wasm.wasmengine_new();
+        this.__wbg_ptr = ret >>> 0;
+        WasmEngineFinalization.register(this, this.__wbg_ptr, this);
+        return this;
+    }
+    /**
+     * Evaluate a single line and return the result as a JSON string
+     * @param {string} input
+     * @returns {string}
+     */
+    eval(input) {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            const ptr0 = passStringToWasm0(input, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
+            const len0 = WASM_VECTOR_LEN;
+            wasm.wasmengine_eval(retptr, this.__wbg_ptr, ptr0, len0);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            deferred2_0 = r0;
+            deferred2_1 = r1;
+            return getStringFromWasm0(r0, r1);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+            wasm.__wbindgen_export(deferred2_0, deferred2_1, 1);
+        }
+    }
+    /**
      * Clear all state
      */
     clear() {
         wasm.wasmengine_clear(this.__wbg_ptr);
-    }
-    /**
-     * Apply exchange rates from JSON object: {"EUR": 0.92, "BTC": 95000, ...}
-     * @param {string} rates_json
-     */
-    apply_rates(rates_json) {
-        const ptr0 = passStringToWasm0(rates_json, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
-        const len0 = WASM_VECTOR_LEN;
-        wasm.wasmengine_apply_rates(this.__wbg_ptr, ptr0, len0);
     }
     /**
      * Get all line results as JSON

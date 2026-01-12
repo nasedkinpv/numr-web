@@ -2,7 +2,7 @@
   "name": "numr-editor",
   "type": "module",
   "description": "Syntax highlighting and text buffer for numr calculator",
-  "version": "0.3.1",
+  "version": "0.4.1",
   "license": "MIT",
   "files": [
     "numr_editor_bg.wasm",
