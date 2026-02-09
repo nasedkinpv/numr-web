@@ -406,11 +406,12 @@ async function shareDocument() {
     updateShareStatus('loading', 'Preparing link...');
 
     try {
-        const hashPayload = await encodeContentForHash(jar.toString());
+        const hashPayload = encodeContentForHash(jar.toString());
         const shareUrl = buildShareUrl(hashPayload);
 
         if (shareUrl.length > SHARE_URL_HARD_LIMIT) {
             updateShareStatus('error', 'Document is too large for a share link');
+            window.alert('This document is too large for a URL share link. Use Download instead.');
             return;
         }
 
@@ -422,23 +423,30 @@ async function shareDocument() {
             return;
         }
 
-        const copied = await copyText(shareUrl);
-        if (!copied) {
-            const manualCopy = window.prompt('Copy this share URL:', shareUrl);
-            if (manualCopy === null) {
+        const copyPromise = copyText(shareUrl);
+        const manualCopy = window.prompt('Copy this share URL:', shareUrl);
+        const copied = await copyPromise;
+
+        if (manualCopy === null) {
+            if (copied) {
+                updateShareStatus('success', 'Link copied');
+            } else {
                 updateShareStatus('idle');
-                return;
             }
+            return;
         }
 
         if (shareUrl.length > SHARE_URL_SOFT_LIMIT) {
-            updateShareStatus('success', `Large link copied (${shareUrl.length} chars)`);
+            updateShareStatus('success', copied
+                ? `Large link copied (${shareUrl.length} chars)`
+                : `Large link ready (${shareUrl.length} chars)`);
         } else {
-            updateShareStatus('success', 'Link copied');
+            updateShareStatus('success', copied ? 'Link copied' : 'Link ready');
         }
     } catch (error) {
         console.warn('Failed to create share link:', error);
         updateShareStatus('error', 'Failed to create share link');
+        window.alert('Failed to create a share link. Please try again.');
     }
 }
 
@@ -495,14 +503,8 @@ function parseShareHash(hash) {
     return { mode: match[1], payload: match[2] };
 }
 
-async function encodeContentForHash(content) {
+function encodeContentForHash(content) {
     const rawBytes = textEncoder.encode(content);
-    const compressedBytes = await compressBytes(rawBytes);
-
-    if (compressedBytes && compressedBytes.length < rawBytes.length) {
-        return `n1.z.${toBase64Url(compressedBytes)}`;
-    }
-
     return `n1.r.${toBase64Url(rawBytes)}`;
 }
 
@@ -555,21 +557,6 @@ function fromBase64Url(base64url) {
     }
 
     return bytes;
-}
-
-async function compressBytes(bytes) {
-    if (typeof CompressionStream !== 'function') return null;
-
-    try {
-        const stream = new CompressionStream('deflate');
-        const writer = stream.writable.getWriter();
-        await writer.write(bytes);
-        await writer.close();
-        const buffer = await new Response(stream.readable).arrayBuffer();
-        return new Uint8Array(buffer);
-    } catch {
-        return null;
-    }
 }
 
 async function decompressBytes(bytes) {
