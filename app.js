@@ -410,43 +410,38 @@ async function shareDocument() {
         const shareUrl = buildShareUrl(hashPayload);
 
         if (shareUrl.length > SHARE_URL_HARD_LIMIT) {
-            updateShareStatus('error', 'Document is too large for a share link');
-            window.alert('This document is too large for a URL share link. Use Download instead.');
+            updateShareStatus('error', 'Link is too large. Use Download');
             return;
         }
 
         window.history.replaceState(null, '', `#${hashPayload}`);
 
-        const nativeShared = await tryNativeShare(shareUrl);
-        if (nativeShared) {
+        const nativeShareResult = await tryNativeShare(shareUrl);
+        if (nativeShareResult === 'success') {
             updateShareStatus('success', 'Shared');
             return;
         }
-
-        const copyPromise = copyText(shareUrl);
-        const manualCopy = window.prompt('Copy this share URL:', shareUrl);
-        const copied = await copyPromise;
-
-        if (manualCopy === null) {
-            if (copied) {
-                updateShareStatus('success', 'Link copied');
-            } else {
-                updateShareStatus('idle');
-            }
+        if (nativeShareResult === 'aborted') {
+            updateShareStatus('idle');
             return;
         }
 
-        if (shareUrl.length > SHARE_URL_SOFT_LIMIT) {
-            updateShareStatus('success', copied
-                ? `Large link copied (${shareUrl.length} chars)`
-                : `Large link ready (${shareUrl.length} chars)`);
-        } else {
-            updateShareStatus('success', copied ? 'Link copied' : 'Link ready');
+        const copied = await copyText(shareUrl);
+        if (copied) {
+            updateShareStatus('success', getShareStatusMessage(shareUrl.length, true));
+            return;
         }
+
+        const manualCopy = window.prompt('Copy this share URL:', shareUrl);
+        if (manualCopy === null) {
+            updateShareStatus('idle');
+            return;
+        }
+
+        updateShareStatus('success', getShareStatusMessage(shareUrl.length, false));
     } catch (error) {
         console.warn('Failed to create share link:', error);
         updateShareStatus('error', 'Failed to create share link');
-        window.alert('Failed to create a share link. Please try again.');
     }
 }
 
@@ -454,8 +449,17 @@ function buildShareUrl(hashPayload) {
     return `${window.location.origin}${window.location.pathname}${window.location.search}#${hashPayload}`;
 }
 
+function getShareStatusMessage(urlLength, copied) {
+    if (urlLength > SHARE_URL_SOFT_LIMIT) {
+        return copied
+            ? `Large link copied (${urlLength} chars)`
+            : `Large link ready (${urlLength} chars)`;
+    }
+    return copied ? 'Link copied' : 'Link ready';
+}
+
 async function tryNativeShare(url) {
-    if (typeof navigator.share !== 'function') return false;
+    if (typeof navigator.share !== 'function') return 'unsupported';
 
     try {
         await navigator.share({
@@ -463,12 +467,12 @@ async function tryNativeShare(url) {
             text: SHARE_NATIVE_TEXT,
             url,
         });
-        return true;
+        return 'success';
     } catch (error) {
         if (error?.name === 'AbortError') {
-            return false;
+            return 'aborted';
         }
-        return false;
+        return 'failed';
     }
 }
 
