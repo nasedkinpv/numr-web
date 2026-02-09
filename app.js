@@ -24,6 +24,8 @@ const RATES_TIMESTAMP_KEY = 'numr-rates-timestamp';
 const RATES_CACHE_TTL = 60 * 60 * 1000; // 1 hour
 const SHARE_HASH_PATTERN = /^n1\.(r|z)\.([A-Za-z0-9_-]+)$/;
 const SHARE_DEFAULT_TITLE = 'Share document link';
+const SHARE_NATIVE_TITLE = 'numr document';
+const SHARE_NATIVE_TEXT = 'Shared from numr';
 const SHARE_URL_SOFT_LIMIT = 8000;
 const SHARE_URL_HARD_LIMIT = 64000;
 const SHARE_RESET_DELAY_MS = 3000;
@@ -401,7 +403,7 @@ function loadFile(event) {
 async function shareDocument() {
     if (!jar) return;
 
-    updateShareStatus('idle', 'Preparing link...');
+    updateShareStatus('loading', 'Preparing link...');
 
     try {
         const hashPayload = await encodeContentForHash(jar.toString());
@@ -412,12 +414,22 @@ async function shareDocument() {
             return;
         }
 
-        const copied = await copyText(shareUrl);
-        if (!copied) {
-            window.prompt('Copy this share URL:', shareUrl);
+        window.history.replaceState(null, '', `#${hashPayload}`);
+
+        const nativeShared = await tryNativeShare(shareUrl);
+        if (nativeShared) {
+            updateShareStatus('success', 'Shared');
+            return;
         }
 
-        window.history.replaceState(null, '', `#${hashPayload}`);
+        const copied = await copyText(shareUrl);
+        if (!copied) {
+            const manualCopy = window.prompt('Copy this share URL:', shareUrl);
+            if (manualCopy === null) {
+                updateShareStatus('idle');
+                return;
+            }
+        }
 
         if (shareUrl.length > SHARE_URL_SOFT_LIMIT) {
             updateShareStatus('success', `Large link copied (${shareUrl.length} chars)`);
@@ -432,6 +444,24 @@ async function shareDocument() {
 
 function buildShareUrl(hashPayload) {
     return `${window.location.origin}${window.location.pathname}${window.location.search}#${hashPayload}`;
+}
+
+async function tryNativeShare(url) {
+    if (typeof navigator.share !== 'function') return false;
+
+    try {
+        await navigator.share({
+            title: SHARE_NATIVE_TITLE,
+            text: SHARE_NATIVE_TEXT,
+            url,
+        });
+        return true;
+    } catch (error) {
+        if (error?.name === 'AbortError') {
+            return false;
+        }
+        return false;
+    }
 }
 
 async function getInitialContent() {
@@ -559,8 +589,12 @@ async function decompressBytes(bytes) {
 
 async function copyText(text) {
     if (navigator.clipboard?.writeText && window.isSecureContext) {
-        await navigator.clipboard.writeText(text);
-        return true;
+        try {
+            await navigator.clipboard.writeText(text);
+            return true;
+        } catch {
+            // Fall back to execCommand below.
+        }
     }
 
     const textarea = document.createElement('textarea');
@@ -588,11 +622,17 @@ async function copyText(text) {
 function updateShareStatus(status, title = SHARE_DEFAULT_TITLE) {
     if (!$.btnShare) return;
 
-    $.btnShare.classList.remove('success', 'error');
+    $.btnShare.classList.remove('loading', 'success', 'error');
 
     if (shareStatusTimer) {
         clearTimeout(shareStatusTimer);
         shareStatusTimer = null;
+    }
+
+    if (status === 'loading') {
+        $.btnShare.classList.add('loading');
+        $.btnShare.title = title;
+        return;
     }
 
     if (status === 'success' || status === 'error') {
