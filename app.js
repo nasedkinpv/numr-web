@@ -22,6 +22,13 @@ const STORAGE_KEY = 'numr-document';
 const RATES_KEY = 'numr-rates';
 const RATES_TIMESTAMP_KEY = 'numr-rates-timestamp';
 const RATES_CACHE_TTL = 60 * 60 * 1000; // 1 hour
+const SHARE_HASH_PATTERN = /^n1\.(r|z)\.([A-Za-z0-9_-]+)$/;
+const SHARE_DEFAULT_TITLE = 'Share document link';
+const SHARE_URL_SOFT_LIMIT = 8000;
+const SHARE_URL_HARD_LIMIT = 64000;
+const SHARE_RESET_DELAY_MS = 3000;
+const textEncoder = new TextEncoder();
+const textDecoder = new TextDecoder();
 
 // Example content shown when localStorage is empty
 const EXAMPLE_CONTENT = `# Quick calculations
@@ -69,6 +76,7 @@ const $ = {
     results: null,
     totals: null,
     btnRates: null,
+    btnShare: null,
     btnNew: null,
     btnSave: null,
     btnLoad: null,
@@ -77,6 +85,7 @@ const $ = {
 
 // Rate fetch status
 let rateStatus = 'idle'; // 'idle' | 'loading' | 'success' | 'error'
+let shareStatusTimer = null;
 
 // ============================================================================
 // Initialization
@@ -165,10 +174,12 @@ async function init() {
     $.results = document.getElementById('results');
     $.totals = document.getElementById('totals');
     $.btnRates = document.getElementById('btn-rates');
+    $.btnShare = document.getElementById('btn-share');
     $.btnNew = document.getElementById('btn-new');
     $.btnSave = document.getElementById('btn-save');
     $.btnLoad = document.getElementById('btn-load');
     $.fileInput = document.getElementById('file-input');
+    updateShareStatus('idle');
 
     // Initialize WASM (includes rate fetching)
     try {
@@ -192,9 +203,9 @@ async function init() {
         },
     });
 
-    // Load saved document (or show example if empty)
-    const saved = localStorage.getItem(STORAGE_KEY);
-    jar.updateCode(saved || EXAMPLE_CONTENT);
+    // Load shared content first, then localStorage/example fallback
+    const initialContent = await getInitialContent();
+    jar.updateCode(initialContent);
 
     // Listen for changes
     jar.onUpdate(() => evaluate());
@@ -262,6 +273,7 @@ function setupEventListeners() {
     $.btnRates.addEventListener('click', () => {
         if (rateStatus !== 'loading') fetchRates();
     });
+    $.btnShare?.addEventListener('click', shareDocument);
     $.btnNew.addEventListener('click', newDocument);
     $.btnSave.addEventListener('click', saveFile);
     $.btnLoad.addEventListener('click', () => $.fileInput.click());
@@ -384,6 +396,217 @@ function loadFile(event) {
 
     // Reset input so same file can be loaded again
     event.target.value = '';
+}
+
+async function shareDocument() {
+    if (!jar) return;
+
+    updateShareStatus('idle', 'Preparing link...');
+
+    try {
+        const hashPayload = await encodeContentForHash(jar.toString());
+        const shareUrl = buildShareUrl(hashPayload);
+
+        if (shareUrl.length > SHARE_URL_HARD_LIMIT) {
+            updateShareStatus('error', 'Document is too large for a share link');
+            return;
+        }
+
+        const copied = await copyText(shareUrl);
+        if (!copied) {
+            window.prompt('Copy this share URL:', shareUrl);
+        }
+
+        window.history.replaceState(null, '', `#${hashPayload}`);
+
+        if (shareUrl.length > SHARE_URL_SOFT_LIMIT) {
+            updateShareStatus('success', `Large link copied (${shareUrl.length} chars)`);
+        } else {
+            updateShareStatus('success', 'Link copied');
+        }
+    } catch (error) {
+        console.warn('Failed to create share link:', error);
+        updateShareStatus('error', 'Failed to create share link');
+    }
+}
+
+function buildShareUrl(hashPayload) {
+    return `${window.location.origin}${window.location.pathname}${window.location.search}#${hashPayload}`;
+}
+
+async function getInitialContent() {
+    const sharedContent = await readContentFromHash();
+    if (sharedContent !== null) {
+        return sharedContent;
+    }
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved || EXAMPLE_CONTENT;
+}
+
+async function readContentFromHash() {
+    const parsed = parseShareHash(window.location.hash);
+    if (!parsed) return null;
+
+    try {
+        return await decodeContentFromHash(parsed.mode, parsed.payload);
+    } catch (error) {
+        console.warn('Failed to decode shared link:', error);
+        updateShareStatus('error', 'Invalid share link');
+        window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+        return null;
+    }
+}
+
+function parseShareHash(hash) {
+    if (!hash) return null;
+    const value = hash.startsWith('#') ? hash.slice(1) : hash;
+    const match = SHARE_HASH_PATTERN.exec(value);
+    if (!match) return null;
+    return { mode: match[1], payload: match[2] };
+}
+
+async function encodeContentForHash(content) {
+    const rawBytes = textEncoder.encode(content);
+    const compressedBytes = await compressBytes(rawBytes);
+
+    if (compressedBytes && compressedBytes.length < rawBytes.length) {
+        return `n1.z.${toBase64Url(compressedBytes)}`;
+    }
+
+    return `n1.r.${toBase64Url(rawBytes)}`;
+}
+
+async function decodeContentFromHash(mode, payload) {
+    const bytes = fromBase64Url(payload);
+
+    if (mode === 'r') {
+        return textDecoder.decode(bytes);
+    }
+
+    if (mode === 'z') {
+        const decompressedBytes = await decompressBytes(bytes);
+        if (!decompressedBytes) {
+            throw new Error('Compressed share links are not supported in this browser');
+        }
+        return textDecoder.decode(decompressedBytes);
+    }
+
+    throw new Error(`Unsupported share format: ${mode}`);
+}
+
+function toBase64Url(bytes) {
+    const chunkSize = 0x8000;
+    let binary = '';
+
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+    }
+
+    return btoa(binary)
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/g, '');
+}
+
+function fromBase64Url(base64url) {
+    const normalized = base64url
+        .replace(/-/g, '+')
+        .replace(/_/g, '/');
+
+    const padding = normalized.length % 4 === 0
+        ? ''
+        : '='.repeat(4 - (normalized.length % 4));
+
+    const binary = atob(normalized + padding);
+    const bytes = new Uint8Array(binary.length);
+
+    for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+
+    return bytes;
+}
+
+async function compressBytes(bytes) {
+    if (typeof CompressionStream !== 'function') return null;
+
+    try {
+        const stream = new CompressionStream('deflate');
+        const writer = stream.writable.getWriter();
+        await writer.write(bytes);
+        await writer.close();
+        const buffer = await new Response(stream.readable).arrayBuffer();
+        return new Uint8Array(buffer);
+    } catch {
+        return null;
+    }
+}
+
+async function decompressBytes(bytes) {
+    if (typeof DecompressionStream !== 'function') return null;
+
+    try {
+        const stream = new DecompressionStream('deflate');
+        const writer = stream.writable.getWriter();
+        await writer.write(bytes);
+        await writer.close();
+        const buffer = await new Response(stream.readable).arrayBuffer();
+        return new Uint8Array(buffer);
+    } catch {
+        throw new Error('Share link payload is corrupted');
+    }
+}
+
+async function copyText(text) {
+    if (navigator.clipboard?.writeText && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return true;
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    textarea.style.pointerEvents = 'none';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+
+    let copied = false;
+    try {
+        copied = document.execCommand('copy');
+    } catch {
+        copied = false;
+    } finally {
+        document.body.removeChild(textarea);
+    }
+
+    return copied;
+}
+
+function updateShareStatus(status, title = SHARE_DEFAULT_TITLE) {
+    if (!$.btnShare) return;
+
+    $.btnShare.classList.remove('success', 'error');
+
+    if (shareStatusTimer) {
+        clearTimeout(shareStatusTimer);
+        shareStatusTimer = null;
+    }
+
+    if (status === 'success' || status === 'error') {
+        $.btnShare.classList.add(status);
+        $.btnShare.title = title;
+        shareStatusTimer = setTimeout(() => {
+            $.btnShare.classList.remove('success', 'error');
+            $.btnShare.title = SHARE_DEFAULT_TITLE;
+            shareStatusTimer = null;
+        }, SHARE_RESET_DELAY_MS);
+        return;
+    }
+
+    $.btnShare.title = title;
 }
 
 // ============================================================================

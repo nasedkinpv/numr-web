@@ -94,6 +94,7 @@ npm run build
 - Real-time calculation as you type
 - Syntax highlighting
 - Local storage persistence
+- Self-contained share links (document in URL hash)
 - Save/load .numr files
 - Units, currencies, percentages, variables
 - Exchange rate fetching (fiat + crypto)

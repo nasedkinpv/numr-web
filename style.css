@@ -175,6 +175,14 @@ header {
     color: var(--error);
 }
 
+#btn-share.success {
+    color: var(--success);
+}
+
+#btn-share.error {
+    color: var(--error);
+}
+
 /* Main: single scroll container */
 .scroll-wrapper {
     flex: 1;
@@ -317,4 +325,3 @@ footer {
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: var(--bg-secondary); }
 ::-webkit-scrollbar-thumb { background: var(--border); }
-
