@@ -7,7 +7,7 @@ Web interface for the numr calculator, powered by WebAssembly.
 Use `<numr-calculator>` anywhere:
 
 ```html
-<script type="module" src="https://numr.cc/numr-calculator.js"></script>
+<script type="module" src="https://numr.cc/numr-calculator.js?v=0.5.2"></script>
 
 <numr-calculator></numr-calculator>
 ```

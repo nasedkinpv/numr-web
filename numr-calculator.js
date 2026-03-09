@@ -34,7 +34,7 @@ import { CodeJar } from "https://esm.sh/codejar@4.3.0";
 // Constants
 // ============================================================================
 
-const VERSION = "0.3.1";
+const VERSION = "0.5.2";
 const STORAGE_KEY = "numr-document";
 const RATES_KEY = "numr-rates";
 const RATES_TIMESTAMP_KEY = "numr-rates-timestamp";
@@ -358,7 +358,17 @@ async function loadWasm(basePath = "") {
       import(editorPath),
     ]);
 
-    await Promise.all([coreModule.default(), editorModule.default()]);
+    const coreWasmPath = basePath
+      ? `${basePath}/pkg/core/numr_core_bg.wasm${v}`
+      : `./pkg/core/numr_core_bg.wasm${v}`;
+    const editorWasmPath = basePath
+      ? `${basePath}/pkg/editor/numr_editor_bg.wasm${v}`
+      : `./pkg/editor/numr_editor_bg.wasm${v}`;
+
+    await Promise.all([
+      coreModule.default(coreWasmPath),
+      editorModule.default(editorWasmPath),
+    ]);
 
     WasmEngine = coreModule.WasmEngine;
     tokenizeFn = editorModule.tokenize;

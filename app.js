@@ -10,8 +10,6 @@
  * No frameworks - just simple, readable code.
  */
 
-import initCore, { WasmEngine } from './pkg/core/numr_core.js';
-import initEditor, { tokenize } from './pkg/editor/numr_editor.js';
 import { CodeJar } from 'https://esm.sh/codejar@4.3.0';
 
 // ============================================================================
@@ -22,6 +20,7 @@ const STORAGE_KEY = 'numr-document';
 const RATES_KEY = 'numr-rates';
 const RATES_TIMESTAMP_KEY = 'numr-rates-timestamp';
 const RATES_CACHE_TTL = 60 * 60 * 1000; // 1 hour
+const WASM_ASSET_VERSION = '0.5.2';
 const SHARE_HASH_PATTERN = /^n1\.(r|z)\.([A-Za-z0-9_-]+)$/;
 const SHARE_DEFAULT_TITLE = 'Share document link';
 const SHARE_NATIVE_TITLE = 'numr document';
@@ -97,11 +96,19 @@ let shareStatusTimer = null;
  * Initialize WASM modules and fetch exchange rates
  */
 async function initWasm() {
-    // Load both WASM modules in parallel
-    await Promise.all([initCore(), initEditor()]);
+    const v = `?v=${WASM_ASSET_VERSION}`;
+    const [coreModule, editorModule] = await Promise.all([
+        import(`./pkg/core/numr_core.js${v}`),
+        import(`./pkg/editor/numr_editor.js${v}`)
+    ]);
 
-    engine = new WasmEngine();
-    tokenizeFn = tokenize;
+    await Promise.all([
+        coreModule.default(new URL(`./pkg/core/numr_core_bg.wasm${v}`, import.meta.url)),
+        editorModule.default(new URL(`./pkg/editor/numr_editor_bg.wasm${v}`, import.meta.url))
+    ]);
+
+    engine = new coreModule.WasmEngine();
+    tokenizeFn = editorModule.tokenize;
 
     // Try to load cached rates first
     const timestamp = localStorage.getItem(RATES_TIMESTAMP_KEY);
