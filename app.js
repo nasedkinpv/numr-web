@@ -21,6 +21,8 @@ const RATES_KEY = 'numr-rates';
 const RATES_TIMESTAMP_KEY = 'numr-rates-timestamp';
 const RATES_CACHE_TTL = 60 * 60 * 1000; // 1 hour
 const WASM_ASSET_VERSION = '0.5.2';
+const ANALYTICS_FLUSH_DELAY_MS = 1000;
+const ANALYTICS_MAX_FLUSH_ATTEMPTS = 10;
 const SHARE_HASH_PATTERN = /^n1\.(r|z)\.([A-Za-z0-9_-]+)$/;
 const SHARE_DEFAULT_TITLE = 'Share document link';
 const SHARE_NATIVE_TITLE = 'numr document';
@@ -87,6 +89,13 @@ const $ = {
 // Rate fetch status
 let rateStatus = 'idle'; // 'idle' | 'loading' | 'success' | 'error'
 let shareStatusTimer = null;
+const analyticsState = {
+    initialSource: 'example',
+    pendingEvents: [],
+    flushAttempts: 0,
+    flushTimer: null,
+    editorEngagedTracked: false,
+};
 
 // ============================================================================
 // Initialization
@@ -122,13 +131,13 @@ async function initWasm() {
     }
 
     // Fetch fresh rates
-    await fetchRates();
+    await fetchRates('auto');
 }
 
 /**
  * Fetch exchange rates from APIs and apply to engine
  */
-async function fetchRates() {
+async function fetchRates(source = 'auto') {
     updateRateStatus('loading');
 
     try {
@@ -161,15 +170,24 @@ async function fetchRates() {
             localStorage.setItem(RATES_KEY, json);
             localStorage.setItem(RATES_TIMESTAMP_KEY, now);
             updateRateStatus('success', now);
+            if (source === 'manual') {
+                trackEvent('Rates Refreshed');
+            }
 
             // Re-evaluate to apply new rates
             evaluate();
         } else {
             updateRateStatus('error');
+            if (source === 'manual') {
+                trackEvent('Rates Refresh Failed');
+            }
         }
     } catch (e) {
         console.warn('Failed to fetch rates:', e);
         updateRateStatus('error');
+        if (source === 'manual') {
+            trackEvent('Rates Refresh Failed');
+        }
     }
 }
 
@@ -218,6 +236,7 @@ async function init() {
 
     // Listen for changes
     jar.onUpdate(() => evaluate());
+    $.editor.addEventListener('input', trackEditorEngagement, { passive: true });
 
     // Initial render
     evaluate();
@@ -280,7 +299,7 @@ function getKnownVariables() {
 
 function setupEventListeners() {
     $.btnRates.addEventListener('click', () => {
-        if (rateStatus !== 'loading') fetchRates();
+        if (rateStatus !== 'loading') fetchRates('manual');
     });
     $.btnShare?.addEventListener('click', shareDocument);
     $.btnNew.addEventListener('click', newDocument);
@@ -373,14 +392,22 @@ function newDocument() {
     if (content && !confirm('Create new document? Unsaved changes will be lost.')) {
         return;
     }
+    if (content.trim()) {
+        trackEvent('New Document Created', {
+            previous_source: analyticsState.initialSource,
+            ...getDocumentMetrics(content),
+        });
+    }
     jar.updateCode('');
     engine?.clear();
+    analyticsState.initialSource = 'new_document';
     evaluate();
     $.editor.focus();
 }
 
 function saveFile() {
-    const blob = new Blob([jar.toString()], { type: 'text/plain' });
+    const content = jar.toString();
+    const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
 
     const a = document.createElement('a');
@@ -389,6 +416,10 @@ function saveFile() {
     a.click();
 
     URL.revokeObjectURL(url);
+    trackEvent('File Downloaded', {
+        source: analyticsState.initialSource,
+        ...getDocumentMetrics(content),
+    });
 }
 
 function loadFile(event) {
@@ -397,9 +428,16 @@ function loadFile(event) {
 
     const reader = new FileReader();
     reader.onload = (e) => {
-        jar.updateCode(e.target.result);
+        const loadedContent = typeof e.target?.result === 'string' ? e.target.result : '';
+        jar.updateCode(loadedContent);
+        analyticsState.initialSource = 'file_import';
         evaluate();
         $.editor.focus();
+        trackEvent('File Imported', {
+            file_extension: getFileExtension(file.name),
+            file_size_bucket: getByteBucket(file.size),
+            ...getDocumentMetrics(loadedContent),
+        });
     };
     reader.readAsText(file);
 
@@ -413,11 +451,17 @@ async function shareDocument() {
     updateShareStatus('loading', 'Preparing link...');
 
     try {
-        const hashPayload = encodeContentForHash(jar.toString());
+        const content = jar.toString();
+        const hashPayload = encodeContentForHash(content);
         const shareUrl = buildShareUrl(hashPayload);
 
         if (shareUrl.length > SHARE_URL_HARD_LIMIT) {
             updateShareStatus('error', 'Link is too large. Use Download');
+            trackEvent('Share Link Too Large', {
+                source: analyticsState.initialSource,
+                link_size_bucket: getLinkSizeBucket(shareUrl.length),
+                ...getDocumentMetrics(content),
+            });
             return;
         }
 
@@ -425,6 +469,7 @@ async function shareDocument() {
 
         const nativeShareResult = await tryNativeShare(shareUrl);
         if (nativeShareResult === 'success') {
+            trackShareCreated('native', shareUrl, content);
             updateShareStatus('success', 'Shared');
             return;
         }
@@ -435,6 +480,7 @@ async function shareDocument() {
 
         const copied = await copyText(shareUrl);
         if (copied) {
+            trackShareCreated('clipboard', shareUrl, content);
             updateShareStatus('success', getShareStatusMessage(shareUrl.length, true));
             return;
         }
@@ -445,6 +491,7 @@ async function shareDocument() {
             return;
         }
 
+        trackShareCreated('manual', shareUrl, content);
         updateShareStatus('success', getShareStatusMessage(shareUrl.length, false));
     } catch (error) {
         console.warn('Failed to create share link:', error);
@@ -486,9 +533,11 @@ async function tryNativeShare(url) {
 async function getInitialContent() {
     const sharedContent = await readContentFromHash();
     if (sharedContent !== null) {
+        analyticsState.initialSource = 'share_link';
         return sharedContent;
     }
     const saved = localStorage.getItem(STORAGE_KEY);
+    analyticsState.initialSource = saved ? 'local_storage' : 'example';
     return saved || EXAMPLE_CONTENT;
 }
 
@@ -497,10 +546,16 @@ async function readContentFromHash() {
     if (!parsed) return null;
 
     try {
-        return await decodeContentFromHash(parsed.mode, parsed.payload);
+        const content = await decodeContentFromHash(parsed.mode, parsed.payload);
+        trackEvent('Shared Link Opened', {
+            format: parsed.mode,
+            ...getDocumentMetrics(content),
+        });
+        return content;
     } catch (error) {
         console.warn('Failed to decode shared link:', error);
         updateShareStatus('error', 'Invalid share link');
+        trackEvent('Shared Link Invalid', { format: parsed.mode });
         window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
         return null;
     }
@@ -645,6 +700,135 @@ function updateShareStatus(status, title = SHARE_DEFAULT_TITLE) {
     }
 
     $.btnShare.title = title;
+}
+
+function trackEditorEngagement() {
+    if (analyticsState.editorEngagedTracked) return;
+
+    analyticsState.editorEngagedTracked = true;
+    trackEvent('Editor Engaged', {
+        source: analyticsState.initialSource,
+        ...getDocumentMetrics(jar?.toString() || ''),
+    });
+}
+
+function trackShareCreated(method, shareUrl, content) {
+    trackEvent('Share Link Created', {
+        method,
+        source: analyticsState.initialSource,
+        link_size_bucket: getLinkSizeBucket(shareUrl.length),
+        ...getDocumentMetrics(content),
+    });
+}
+
+function trackEvent(name, data = undefined) {
+    const payload = sanitizeAnalyticsData(data);
+    if (sendTrackedEvent(name, payload)) return;
+
+    if (analyticsState.pendingEvents.length >= 32) return;
+    analyticsState.pendingEvents.push({ name, payload });
+    scheduleAnalyticsFlush();
+}
+
+function sendTrackedEvent(name, payload) {
+    const track = window.umami?.track;
+    if (typeof track !== 'function') return false;
+
+    try {
+        if (payload && Object.keys(payload).length > 0) {
+            track(name, payload);
+        } else {
+            track(name);
+        }
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+function scheduleAnalyticsFlush() {
+    if (analyticsState.flushTimer || analyticsState.flushAttempts >= ANALYTICS_MAX_FLUSH_ATTEMPTS) {
+        return;
+    }
+
+    analyticsState.flushTimer = window.setTimeout(flushAnalyticsQueue, ANALYTICS_FLUSH_DELAY_MS);
+}
+
+function flushAnalyticsQueue() {
+    analyticsState.flushTimer = null;
+
+    if (!analyticsState.pendingEvents.length) return;
+    if (typeof window.umami?.track !== 'function') {
+        analyticsState.flushAttempts += 1;
+        if (analyticsState.flushAttempts >= ANALYTICS_MAX_FLUSH_ATTEMPTS) {
+            analyticsState.pendingEvents = [];
+            return;
+        }
+        scheduleAnalyticsFlush();
+        return;
+    }
+
+    analyticsState.flushAttempts = 0;
+    const pendingEvents = analyticsState.pendingEvents.splice(0);
+    for (const event of pendingEvents) {
+        sendTrackedEvent(event.name, event.payload);
+    }
+}
+
+function sanitizeAnalyticsData(data) {
+    if (!data) return undefined;
+
+    const entries = Object.entries(data).filter(([, value]) =>
+        value !== undefined && value !== null && value !== ''
+    );
+
+    return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+}
+
+function getDocumentMetrics(content) {
+    const length = content.length;
+    const lineCount = content ? content.split('\n').length : 0;
+
+    return {
+        content_bucket: getContentBucket(length),
+        line_bucket: getLineBucket(lineCount),
+    };
+}
+
+function getContentBucket(length) {
+    if (length === 0) return 'empty';
+    if (length <= 80) return '1-80';
+    if (length <= 300) return '81-300';
+    if (length <= 1500) return '301-1500';
+    return '1500+';
+}
+
+function getLineBucket(lineCount) {
+    if (lineCount === 0) return '0';
+    if (lineCount <= 1) return '1';
+    if (lineCount <= 5) return '2-5';
+    if (lineCount <= 20) return '6-20';
+    if (lineCount <= 50) return '21-50';
+    return '50+';
+}
+
+function getByteBucket(byteCount) {
+    if (byteCount <= 1024) return '0-1kb';
+    if (byteCount <= 10 * 1024) return '1-10kb';
+    if (byteCount <= 64 * 1024) return '10-64kb';
+    return '64kb+';
+}
+
+function getLinkSizeBucket(length) {
+    if (length <= 1000) return '0-1k';
+    if (length <= 4000) return '1k-4k';
+    if (length <= 8000) return '4k-8k';
+    return '8k+';
+}
+
+function getFileExtension(filename) {
+    const parts = filename.toLowerCase().split('.');
+    return parts.length > 1 ? parts.pop() : 'unknown';
 }
 
 // ============================================================================
