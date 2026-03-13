@@ -34,7 +34,7 @@ import { CodeJar } from "https://esm.sh/codejar@4.3.0";
 // Constants
 // ============================================================================
 
-const VERSION = "0.5.2";
+const VERSION = "47d6f6cb29";
 const STORAGE_KEY = "numr-document";
 const RATES_KEY = "numr-rates";
 const RATES_TIMESTAMP_KEY = "numr-rates-timestamp";

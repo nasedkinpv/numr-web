@@ -16,7 +16,8 @@
     "build:core": "PATH=\"$HOME/.cargo/bin:$PATH\" wasm-pack build ../crates/numr-core --target web --out-dir ../../numr-web/pkg/core --features wasm",
     "build:editor": "PATH=\"$HOME/.cargo/bin:$PATH\" wasm-pack build ../crates/numr-editor --target web --out-dir ../../numr-web/pkg/editor --features wasm",
     "build:wasm": "npm run build:core && npm run build:editor",
-    "build": "npm run clean && npm run build:wasm",
+    "stamp:assets": "node scripts/stamp-asset-versions.mjs",
+    "build": "npm run clean && npm run build:wasm && npm run stamp:assets",
     "serve": "python3 -m http.server 8080",
     "start": "npm run build && npm run serve"
   },

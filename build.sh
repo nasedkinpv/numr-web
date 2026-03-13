@@ -26,6 +26,10 @@ wasm-pack build crates/numr-editor \
     --features wasm
 
 echo ""
+echo "Stamping asset versions..."
+node numr-web/scripts/stamp-asset-versions.mjs
+
+echo ""
 echo "Build complete! Files are in numr-web/pkg/"
 echo ""
 echo "To serve locally:"

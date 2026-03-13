@@ -105,11 +105,11 @@ header {
     opacity: 0.8;
     animation: crt-shimmer 8s ease-in-out infinite;
     pointer-events: none;
-    mask-image: url('NUMR.svg');
+    mask-image: url('NUMR.svg?v=d65f1f804f');
     mask-size: contain;
     mask-repeat: no-repeat;
     mask-position: center;
-    -webkit-mask-image: url('NUMR.svg');
+    -webkit-mask-image: url('NUMR.svg?v=d65f1f804f');
     -webkit-mask-size: contain;
     -webkit-mask-repeat: no-repeat;
     -webkit-mask-position: center;
