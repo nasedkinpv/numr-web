@@ -2,7 +2,7 @@
   "name": "numr-core",
   "type": "module",
   "description": "Core calculation engine for numr - expression parsing, evaluation, and unit handling",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "license": "MIT",
   "files": [
     "numr_core_bg.wasm",

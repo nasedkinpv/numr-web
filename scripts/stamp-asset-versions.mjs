@@ -42,13 +42,11 @@ function hashFiles(relativePaths) {
 }
 
 function replaceRequired(content, pattern, replacement, label) {
-  const nextContent = content.replace(pattern, replacement);
-
-  if (nextContent === content) {
+  if (!pattern.test(content)) {
     throw new Error(`Failed to update ${label}`);
   }
 
-  return nextContent;
+  return content.replace(pattern, replacement);
 }
 
 const assetVersions = {

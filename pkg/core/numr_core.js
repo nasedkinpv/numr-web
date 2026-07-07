@@ -1,4 +1,222 @@
-let wasm;
+/* @ts-self-types="./numr_core.d.ts" */
+
+/**
+ * WASM-compatible wrapper for the numr Engine
+ */
+export class WasmEngine {
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        WasmEngineFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_wasmengine_free(ptr, 0);
+    }
+    /**
+     * Apply exchange rates from JSON object: {"EUR": 0.92, "BTC": 95000, ...}
+     * @param {string} rates_json
+     */
+    apply_rates(rates_json) {
+        const ptr0 = passStringToWasm0(rates_json, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.wasmengine_apply_rates(this.__wbg_ptr, ptr0, len0);
+    }
+    /**
+     * Clear all state
+     */
+    clear() {
+        wasm.wasmengine_clear(this.__wbg_ptr);
+    }
+    /**
+     * Evaluate a single line and return the result as a JSON string
+     * @param {string} input
+     * @returns {string}
+     */
+    eval(input) {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            const ptr0 = passStringToWasm0(input, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
+            const len0 = WASM_VECTOR_LEN;
+            wasm.wasmengine_eval(retptr, this.__wbg_ptr, ptr0, len0);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            deferred2_0 = r0;
+            deferred2_1 = r1;
+            return getStringFromWasm0(r0, r1);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+            wasm.__wbindgen_export(deferred2_0, deferred2_1, 1);
+        }
+    }
+    /**
+     * Evaluate multiple lines from a document, returns JSON array of results
+     * @param {string} content
+     * @returns {string}
+     */
+    eval_document(content) {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            const ptr0 = passStringToWasm0(content, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
+            const len0 = WASM_VECTOR_LEN;
+            wasm.wasmengine_eval_document(retptr, this.__wbg_ptr, ptr0, len0);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            deferred2_0 = r0;
+            deferred2_1 = r1;
+            return getStringFromWasm0(r0, r1);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+            wasm.__wbindgen_export(deferred2_0, deferred2_1, 1);
+        }
+    }
+    /**
+     * Evaluate without storing the result (for live preview)
+     * @param {string} input
+     * @returns {string}
+     */
+    eval_preview(input) {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            const ptr0 = passStringToWasm0(input, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
+            const len0 = WASM_VECTOR_LEN;
+            wasm.wasmengine_eval_preview(retptr, this.__wbg_ptr, ptr0, len0);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            deferred2_0 = r0;
+            deferred2_1 = r1;
+            return getStringFromWasm0(r0, r1);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+            wasm.__wbindgen_export(deferred2_0, deferred2_1, 1);
+        }
+    }
+    /**
+     * Get all line results as JSON
+     * @returns {string}
+     */
+    get_lines() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            wasm.wasmengine_get_lines(retptr, this.__wbg_ptr);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            deferred1_0 = r0;
+            deferred1_1 = r1;
+            return getStringFromWasm0(r0, r1);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+            wasm.__wbindgen_export(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * Get grouped totals as JSON
+     * @returns {string}
+     */
+    get_totals() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            wasm.wasmengine_get_totals(retptr, this.__wbg_ptr);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            deferred1_0 = r0;
+            deferred1_1 = r1;
+            return getStringFromWasm0(r0, r1);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+            wasm.__wbindgen_export(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * Get all variables as JSON
+     * @returns {string}
+     */
+    get_variables() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            wasm.wasmengine_get_variables(retptr, this.__wbg_ptr);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            deferred1_0 = r0;
+            deferred1_1 = r1;
+            return getStringFromWasm0(r0, r1);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+            wasm.__wbindgen_export(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * Create a new engine instance
+     */
+    constructor() {
+        const ret = wasm.wasmengine_new();
+        this.__wbg_ptr = ret;
+        WasmEngineFinalization.register(this, this.__wbg_ptr, this);
+        return this;
+    }
+}
+if (Symbol.dispose) WasmEngine.prototype[Symbol.dispose] = WasmEngine.prototype.free;
+
+/**
+ * Initialize panic hook for better error messages in the browser console
+ */
+export function init() {
+    wasm.init();
+}
+function __wbg_get_imports() {
+    const import0 = {
+        __proto__: null,
+        __wbg___wbindgen_throw_344f42d3211c4765: function(arg0, arg1) {
+            throw new Error(getStringFromWasm0(arg0, arg1));
+        },
+        __wbg_error_a6fa202b58aa1cd3: function(arg0, arg1) {
+            let deferred0_0;
+            let deferred0_1;
+            try {
+                deferred0_0 = arg0;
+                deferred0_1 = arg1;
+                console.error(getStringFromWasm0(arg0, arg1));
+            } finally {
+                wasm.__wbindgen_export(deferred0_0, deferred0_1, 1);
+            }
+        },
+        __wbg_new_227d7c05414eb861: function() {
+            const ret = new Error();
+            return addHeapObject(ret);
+        },
+        __wbg_stack_3b0d974bbf31e44f: function(arg0, arg1) {
+            const ret = getObject(arg1).stack;
+            const ptr1 = passStringToWasm0(ret, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
+            const len1 = WASM_VECTOR_LEN;
+            getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
+            getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
+        },
+        __wbindgen_object_drop_ref: function(arg0) {
+            takeObject(arg0);
+        },
+    };
+    return {
+        __proto__: null,
+        "./numr_core_bg.js": import0,
+    };
+}
+
+const WasmEngineFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_wasmengine_free(ptr, 1));
 
 function addHeapObject(obj) {
     if (heap_next === heap.length) heap.push(heap.length + 1);
@@ -10,7 +228,7 @@ function addHeapObject(obj) {
 }
 
 function dropObject(idx) {
-    if (idx < 132) return;
+    if (idx < 1028) return;
     heap[idx] = heap_next;
     heap_next = idx;
 }
@@ -24,8 +242,7 @@ function getDataViewMemory0() {
 }
 
 function getStringFromWasm0(ptr, len) {
-    ptr = ptr >>> 0;
-    return decodeText(ptr, len);
+    return decodeText(ptr >>> 0, len);
 }
 
 let cachedUint8ArrayMemory0 = null;
@@ -38,7 +255,7 @@ function getUint8ArrayMemory0() {
 
 function getObject(idx) { return heap[idx]; }
 
-let heap = new Array(128).fill(undefined);
+let heap = new Array(1024).fill(undefined);
 heap.push(undefined, null, true, false);
 
 let heap_next = heap.length;
@@ -110,193 +327,21 @@ if (!('encodeInto' in cachedTextEncoder)) {
             read: arg.length,
             written: buf.length
         };
-    }
+    };
 }
 
 let WASM_VECTOR_LEN = 0;
 
-const WasmEngineFinalization = (typeof FinalizationRegistry === 'undefined')
-    ? { register: () => {}, unregister: () => {} }
-    : new FinalizationRegistry(ptr => wasm.__wbg_wasmengine_free(ptr >>> 0, 1));
-
-/**
- * WASM-compatible wrapper for the numr Engine
- */
-export class WasmEngine {
-    __destroy_into_raw() {
-        const ptr = this.__wbg_ptr;
-        this.__wbg_ptr = 0;
-        WasmEngineFinalization.unregister(this);
-        return ptr;
-    }
-    free() {
-        const ptr = this.__destroy_into_raw();
-        wasm.__wbg_wasmengine_free(ptr, 0);
-    }
-    /**
-     * Get grouped totals as JSON
-     * @returns {string}
-     */
-    get_totals() {
-        let deferred1_0;
-        let deferred1_1;
-        try {
-            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-            wasm.wasmengine_get_totals(retptr, this.__wbg_ptr);
-            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-            deferred1_0 = r0;
-            deferred1_1 = r1;
-            return getStringFromWasm0(r0, r1);
-        } finally {
-            wasm.__wbindgen_add_to_stack_pointer(16);
-            wasm.__wbindgen_export(deferred1_0, deferred1_1, 1);
-        }
-    }
-    /**
-     * Apply exchange rates from JSON object: {"EUR": 0.92, "BTC": 95000, ...}
-     * @param {string} rates_json
-     */
-    apply_rates(rates_json) {
-        const ptr0 = passStringToWasm0(rates_json, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
-        const len0 = WASM_VECTOR_LEN;
-        wasm.wasmengine_apply_rates(this.__wbg_ptr, ptr0, len0);
-    }
-    /**
-     * Evaluate without storing the result (for live preview)
-     * @param {string} input
-     * @returns {string}
-     */
-    eval_preview(input) {
-        let deferred2_0;
-        let deferred2_1;
-        try {
-            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-            const ptr0 = passStringToWasm0(input, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
-            const len0 = WASM_VECTOR_LEN;
-            wasm.wasmengine_eval_preview(retptr, this.__wbg_ptr, ptr0, len0);
-            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-            deferred2_0 = r0;
-            deferred2_1 = r1;
-            return getStringFromWasm0(r0, r1);
-        } finally {
-            wasm.__wbindgen_add_to_stack_pointer(16);
-            wasm.__wbindgen_export(deferred2_0, deferred2_1, 1);
-        }
-    }
-    /**
-     * Evaluate multiple lines from a document, returns JSON array of results
-     * @param {string} content
-     * @returns {string}
-     */
-    eval_document(content) {
-        let deferred2_0;
-        let deferred2_1;
-        try {
-            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-            const ptr0 = passStringToWasm0(content, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
-            const len0 = WASM_VECTOR_LEN;
-            wasm.wasmengine_eval_document(retptr, this.__wbg_ptr, ptr0, len0);
-            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-            deferred2_0 = r0;
-            deferred2_1 = r1;
-            return getStringFromWasm0(r0, r1);
-        } finally {
-            wasm.__wbindgen_add_to_stack_pointer(16);
-            wasm.__wbindgen_export(deferred2_0, deferred2_1, 1);
-        }
-    }
-    /**
-     * Get all variables as JSON
-     * @returns {string}
-     */
-    get_variables() {
-        let deferred1_0;
-        let deferred1_1;
-        try {
-            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-            wasm.wasmengine_get_variables(retptr, this.__wbg_ptr);
-            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-            deferred1_0 = r0;
-            deferred1_1 = r1;
-            return getStringFromWasm0(r0, r1);
-        } finally {
-            wasm.__wbindgen_add_to_stack_pointer(16);
-            wasm.__wbindgen_export(deferred1_0, deferred1_1, 1);
-        }
-    }
-    /**
-     * Create a new engine instance
-     */
-    constructor() {
-        const ret = wasm.wasmengine_new();
-        this.__wbg_ptr = ret >>> 0;
-        WasmEngineFinalization.register(this, this.__wbg_ptr, this);
-        return this;
-    }
-    /**
-     * Evaluate a single line and return the result as a JSON string
-     * @param {string} input
-     * @returns {string}
-     */
-    eval(input) {
-        let deferred2_0;
-        let deferred2_1;
-        try {
-            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-            const ptr0 = passStringToWasm0(input, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
-            const len0 = WASM_VECTOR_LEN;
-            wasm.wasmengine_eval(retptr, this.__wbg_ptr, ptr0, len0);
-            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-            deferred2_0 = r0;
-            deferred2_1 = r1;
-            return getStringFromWasm0(r0, r1);
-        } finally {
-            wasm.__wbindgen_add_to_stack_pointer(16);
-            wasm.__wbindgen_export(deferred2_0, deferred2_1, 1);
-        }
-    }
-    /**
-     * Clear all state
-     */
-    clear() {
-        wasm.wasmengine_clear(this.__wbg_ptr);
-    }
-    /**
-     * Get all line results as JSON
-     * @returns {string}
-     */
-    get_lines() {
-        let deferred1_0;
-        let deferred1_1;
-        try {
-            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-            wasm.wasmengine_get_lines(retptr, this.__wbg_ptr);
-            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-            deferred1_0 = r0;
-            deferred1_1 = r1;
-            return getStringFromWasm0(r0, r1);
-        } finally {
-            wasm.__wbindgen_add_to_stack_pointer(16);
-            wasm.__wbindgen_export(deferred1_0, deferred1_1, 1);
-        }
-    }
+let wasmModule, wasmInstance, wasm;
+function __wbg_finalize_init(instance, module) {
+    wasmInstance = instance;
+    wasm = instance.exports;
+    wasmModule = module;
+    cachedDataViewMemory0 = null;
+    cachedUint8ArrayMemory0 = null;
+    wasm.__wbindgen_start();
+    return wasm;
 }
-if (Symbol.dispose) WasmEngine.prototype[Symbol.dispose] = WasmEngine.prototype.free;
-
-/**
- * Initialize panic hook for better error messages in the browser console
- */
-export function init() {
-    wasm.init();
-}
-
-const EXPECTED_RESPONSE_TYPES = new Set(['basic', 'cors', 'default']);
 
 async function __wbg_load(module, imports) {
     if (typeof Response === 'function' && module instanceof Response) {
@@ -304,14 +349,12 @@ async function __wbg_load(module, imports) {
             try {
                 return await WebAssembly.instantiateStreaming(module, imports);
             } catch (e) {
-                const validResponse = module.ok && EXPECTED_RESPONSE_TYPES.has(module.type);
+                const validResponse = module.ok && expectedResponseType(module.type);
 
                 if (validResponse && module.headers.get('Content-Type') !== 'application/wasm') {
                     console.warn("`WebAssembly.instantiateStreaming` failed because your server does not serve Wasm with `application/wasm` MIME type. Falling back to `WebAssembly.instantiate` which is slower. Original error:\n", e);
 
-                } else {
-                    throw e;
-                }
+                } else { throw e; }
             }
         }
 
@@ -326,59 +369,20 @@ async function __wbg_load(module, imports) {
             return instance;
         }
     }
-}
 
-function __wbg_get_imports() {
-    const imports = {};
-    imports.wbg = {};
-    imports.wbg.__wbg___wbindgen_throw_dd24417ed36fc46e = function(arg0, arg1) {
-        throw new Error(getStringFromWasm0(arg0, arg1));
-    };
-    imports.wbg.__wbg_error_7534b8e9a36f1ab4 = function(arg0, arg1) {
-        let deferred0_0;
-        let deferred0_1;
-        try {
-            deferred0_0 = arg0;
-            deferred0_1 = arg1;
-            console.error(getStringFromWasm0(arg0, arg1));
-        } finally {
-            wasm.__wbindgen_export(deferred0_0, deferred0_1, 1);
+    function expectedResponseType(type) {
+        switch (type) {
+            case 'basic': case 'cors': case 'default': return true;
         }
-    };
-    imports.wbg.__wbg_new_8a6f238a6ece86ea = function() {
-        const ret = new Error();
-        return addHeapObject(ret);
-    };
-    imports.wbg.__wbg_stack_0ed75d68575b0f3c = function(arg0, arg1) {
-        const ret = getObject(arg1).stack;
-        const ptr1 = passStringToWasm0(ret, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
-        const len1 = WASM_VECTOR_LEN;
-        getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
-        getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
-    };
-    imports.wbg.__wbindgen_object_drop_ref = function(arg0) {
-        takeObject(arg0);
-    };
-
-    return imports;
-}
-
-function __wbg_finalize_init(instance, module) {
-    wasm = instance.exports;
-    __wbg_init.__wbindgen_wasm_module = module;
-    cachedDataViewMemory0 = null;
-    cachedUint8ArrayMemory0 = null;
-
-
-    wasm.__wbindgen_start();
-    return wasm;
+        return false;
+    }
 }
 
 function initSync(module) {
     if (wasm !== undefined) return wasm;
 
 
-    if (typeof module !== 'undefined') {
+    if (module !== undefined) {
         if (Object.getPrototypeOf(module) === Object.prototype) {
             ({module} = module)
         } else {
@@ -398,7 +402,7 @@ async function __wbg_init(module_or_path) {
     if (wasm !== undefined) return wasm;
 
 
-    if (typeof module_or_path !== 'undefined') {
+    if (module_or_path !== undefined) {
         if (Object.getPrototypeOf(module_or_path) === Object.prototype) {
             ({module_or_path} = module_or_path)
         } else {
@@ -406,7 +410,7 @@ async function __wbg_init(module_or_path) {
         }
     }
 
-    if (typeof module_or_path === 'undefined') {
+    if (module_or_path === undefined) {
         module_or_path = new URL('numr_core_bg.wasm', import.meta.url);
     }
     const imports = __wbg_get_imports();
@@ -420,5 +424,4 @@ async function __wbg_init(module_or_path) {
     return __wbg_finalize_init(instance, module);
 }
 
-export { initSync };
-export default __wbg_init;
+export { initSync, __wbg_init as default };
