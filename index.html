@@ -1,76 +1,117 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>numr - Text Calculator with Units, Currency & Variables</title>
-    <meta name="description" content="Natural language calculator. Write expressions like '20% of 150', '$100 in euros', or '2h + 30min'. Variables, unit conversions, and live exchange rates.">
-    <link rel="canonical" href="https://numr.cc">
+    <meta
+      name="description"
+      content="Natural language calculator. Write expressions like '20% of 150', '$100 in euros', or '2h + 30min'. Variables, unit conversions, and live exchange rates."
+    />
+    <link rel="canonical" href="https://numr.cc" />
 
     <!-- Open Graph -->
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://numr.cc">
-    <meta property="og:title" content="numr - Text Calculator">
-    <meta property="og:description" content="Natural language calculator with variables, units, and live currency rates.">
-    <meta property="og:image" content="https://numr.cc/og-image.png">
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://numr.cc" />
+    <meta property="og:title" content="numr - Text Calculator" />
+    <meta
+      property="og:description"
+      content="Natural language calculator with variables, units, and live currency rates."
+    />
+    <meta property="og:image" content="https://numr.cc/og-image.png" />
 
     <!-- Twitter -->
-    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:card" content="summary_large_image" />
 
     <!-- Favicon & Theme -->
-    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=adcd652552" sizes="any">
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=a587dc9ec0">
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=98913d2459">
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=e10cd04d91">
-    <meta name="theme-color" content="#1a1a2e">
+    <link
+      rel="icon"
+      type="image/x-icon"
+      href="/favicon.ico?v=adcd652552"
+      sizes="any"
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=a587dc9ec0" />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="/favicon.png?v=98913d2459"
+    />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=e10cd04d91" />
+    <meta name="theme-color" content="#1a1a2e" />
 
-    <link rel="stylesheet" href="style.css?v=9e8d132f2f">
+    <link rel="stylesheet" href="style.css?v=9e8d132f2f" />
 
     <!-- Preload critical resources -->
-    <link rel="preload" href="/pkg/core/numr_core_bg.wasm?v=818e648755" as="fetch" crossorigin>
-    <link rel="preload" href="/pkg/editor/numr_editor_bg.wasm?v=818e648755" as="fetch" crossorigin>
-    <link rel="modulepreload" href="https://esm.sh/codejar@4.3.0">
+    <link
+      rel="preload"
+      href="/pkg/core/numr_core_bg.wasm?v=818e648755"
+      as="fetch"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/pkg/editor/numr_editor_bg.wasm?v=818e648755"
+      as="fetch"
+      crossorigin
+    />
+    <link rel="modulepreload" href="https://esm.sh/codejar@4.3.0" />
 
-    <script defer src="https://unpkg.com/lucide@0.561.0/dist/umd/lucide.min.js"></script>
     <script
-        defer
-        src="https://umami.beneric.studio/script.js"
-        data-website-id="20c5159f-decb-4b96-9e87-37133a60698d"
-        data-domains="numr.cc,www.numr.cc"
-        data-exclude-hash="true"
-        data-do-not-track="true"
+      defer
+      src="https://unpkg.com/lucide@0.561.0/dist/umd/lucide.min.js"
     ></script>
-</head>
-<body>
+    <script
+      defer
+      src="https://umami.beneric.studio/script.js"
+      data-website-id="20c5159f-decb-4b96-9e87-37133a60698d"
+      data-domains="numr.cc,www.numr.cc"
+      data-exclude-hash="true"
+      data-do-not-track="true"
+    ></script>
+  </head>
+  <body>
     <div class="container">
-        <!-- Header with actions -->
-        <header>
-            <a href="/" class="logo"><img src="NUMR.svg?v=d65f1f804f" alt="NUMR"></a>
-            <div class="actions">
-                <button id="btn-rates" title="Refresh exchange rates"><i data-lucide="refresh-cw"></i></button>
-                <button id="btn-share" title="Share document link"><i data-lucide="share-2"></i></button>
-                <button id="btn-new" title="New document"><i data-lucide="file-plus"></i></button>
-                <button id="btn-save" title="Download file"><i data-lucide="download"></i></button>
-                <button id="btn-load" title="Upload file"><i data-lucide="upload"></i></button>
-                <input type="file" id="file-input" accept=".numr,.txt" hidden>
-            </div>
-        </header>
+      <!-- Header with actions -->
+      <header>
+        <a href="/" class="logo"
+          ><img src="NUMR.svg?v=d65f1f804f" alt="NUMR"
+        /></a>
+        <div class="actions">
+          <button id="btn-rates" title="Refresh exchange rates">
+            <i data-lucide="refresh-cw"></i>
+          </button>
+          <button id="btn-share" title="Share document link">
+            <i data-lucide="share-2"></i>
+          </button>
+          <button id="btn-new" title="New document">
+            <i data-lucide="file-plus"></i>
+          </button>
+          <button id="btn-save" title="Download file">
+            <i data-lucide="download"></i>
+          </button>
+          <button id="btn-load" title="Upload file">
+            <i data-lucide="upload"></i>
+          </button>
+          <input type="file" id="file-input" accept=".numr,.txt" hidden />
+        </div>
+      </header>
 
-        <!-- Main editor area: single scroll container with 3-column grid -->
-        <main class="scroll-wrapper">
-            <div class="editor-grid">
-                <div class="gutter" id="line-numbers"></div>
-                <div class="editor" id="editor"></div>
-                <div class="gutter" id="results"></div>
-            </div>
-        </main>
+      <!-- Main editor area: single scroll container with 3-column grid -->
+      <main class="scroll-wrapper">
+        <div class="editor-grid">
+          <div class="gutter" id="line-numbers"></div>
+          <div class="editor" id="editor"></div>
+          <div class="gutter" id="results"></div>
+        </div>
+      </main>
 
-        <!-- Footer with totals -->
-        <footer>
-            <div id="totals"></div>
-        </footer>
+      <!-- Footer with totals -->
+      <footer>
+        <div id="totals"></div>
+      </footer>
     </div>
 
-    <script type="module" src="app.js?v=56552e75f8"></script>
-</body>
+    <script type="module" src="app.js?v=f23230bfb4"></script>
+  </body>
 </html>

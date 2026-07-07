@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>numr</title>
+    <meta name="theme-color" content="#1a1a2e" />
+    <link rel="icon" type="image/x-icon" href="favicon.ico" sizes="any" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon.png" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="desktop.css" />
+  </head>
+  <body class="desktop">
+    <div class="container">
+      <header class="electrobun-webkit-app-region-drag">
+        <a href="./index.html" class="logo electrobun-webkit-app-region-no-drag"
+          ><img src="NUMR.svg" alt="NUMR"
+        /></a>
+        <div class="actions electrobun-webkit-app-region-no-drag">
+          <button id="btn-rates" title="Refresh exchange rates">↻</button>
+          <button id="btn-new" title="New document">+</button>
+          <button id="btn-save" title="Download file">↓</button>
+        </div>
+      </header>
+
+      <main class="scroll-wrapper">
+        <div class="editor-grid">
+          <div class="gutter" id="line-numbers"></div>
+          <div class="editor" id="editor"></div>
+          <div class="gutter" id="results"></div>
+        </div>
+      </main>
+
+      <footer>
+        <div id="totals"></div>
+      </footer>
+    </div>
+
+    <script type="module" src="app.js"></script>
+    <script type="module" src="index.js"></script>
+  </body>
+</html>

@@ -29,6 +29,7 @@
 import { LitElement, html, nothing } from "https://esm.sh/lit@3";
 import { unsafeHTML } from "https://esm.sh/lit@3/directives/unsafe-html.js";
 import { CodeJar } from "https://esm.sh/codejar@4.3.0";
+import { loadNumrWasm } from "./src/shared/wasm-loader.js";
 
 // ============================================================================
 // Constants
@@ -54,21 +55,21 @@ _ / 3                      // _ references previous result
 `;
 
 const CRYPTO_IDS = {
-  BTC: "bitcoin",
-  ETH: "ethereum",
-  SOL: "solana",
-  USDT: "tether",
-  USDC: "usd-coin",
-  BNB: "binancecoin",
-  XRP: "ripple",
-  ADA: "cardano",
-  DOGE: "dogecoin",
-  DOT: "polkadot",
-  LTC: "litecoin",
-  LINK: "chainlink",
-  AVAX: "avalanche-2",
-  MATIC: "polygon-ecosystem-token",
-  TON: "the-open-network",
+	BTC: "bitcoin",
+	ETH: "ethereum",
+	SOL: "solana",
+	USDT: "tether",
+	USDC: "usd-coin",
+	BNB: "binancecoin",
+	XRP: "ripple",
+	ADA: "cardano",
+	DOGE: "dogecoin",
+	DOT: "polkadot",
+	LTC: "litecoin",
+	LINK: "chainlink",
+	AVAX: "avalanche-2",
+	MATIC: "polygon-ecosystem-token",
+	TON: "the-open-network",
 };
 
 // ============================================================================
@@ -78,11 +79,11 @@ const CRYPTO_IDS = {
 const STYLES_ID = "numr-calculator-styles";
 
 function injectStyles() {
-  if (document.getElementById(STYLES_ID)) return;
+	if (document.getElementById(STYLES_ID)) return;
 
-  const style = document.createElement("style");
-  style.id = STYLES_ID;
-  style.textContent = `
+	const style = document.createElement("style");
+	style.id = STYLES_ID;
+	style.textContent = `
     /* numr-calculator component styles */
     numr-calculator {
       display: block;
@@ -330,363 +331,335 @@ function injectStyles() {
     .numr-scroll-wrapper::-webkit-scrollbar-track { background: var(--_bg-secondary); }
     .numr-scroll-wrapper::-webkit-scrollbar-thumb { background: var(--_border); }
   `;
-  document.head.appendChild(style);
+	document.head.appendChild(style);
 }
 
 // ============================================================================
 // WASM Module Loading (shared across instances)
 // ============================================================================
 
-let wasmPromise = null;
-let WasmEngine = null;
 let tokenizeFn = null;
-
-async function loadWasm(basePath = "") {
-  if (wasmPromise) return wasmPromise;
-
-  wasmPromise = (async () => {
-    const v = `?v=${VERSION}`;
-    const corePath = basePath
-      ? `${basePath}/pkg/core/numr_core.js${v}`
-      : `./pkg/core/numr_core.js${v}`;
-    const editorPath = basePath
-      ? `${basePath}/pkg/editor/numr_editor.js${v}`
-      : `./pkg/editor/numr_editor.js${v}`;
-
-    const [coreModule, editorModule] = await Promise.all([
-      import(corePath),
-      import(editorPath),
-    ]);
-
-    const coreWasmPath = basePath
-      ? `${basePath}/pkg/core/numr_core_bg.wasm${v}`
-      : `./pkg/core/numr_core_bg.wasm${v}`;
-    const editorWasmPath = basePath
-      ? `${basePath}/pkg/editor/numr_editor_bg.wasm${v}`
-      : `./pkg/editor/numr_editor_bg.wasm${v}`;
-
-    await Promise.all([
-      coreModule.default(coreWasmPath),
-      editorModule.default(editorWasmPath),
-    ]);
-
-    WasmEngine = coreModule.WasmEngine;
-    tokenizeFn = editorModule.tokenize;
-  })();
-
-  return wasmPromise;
-}
 
 // ============================================================================
 // NumrCalculator Component
 // ============================================================================
 
 export class NumrCalculator extends LitElement {
-  static properties = {
-    content: { type: String },
-    minimal: { type: Boolean },
-    readonly: { type: Boolean },
-    norates: { type: Boolean },
-    autosave: { type: Boolean },
-    storageKey: { type: String, attribute: "storage-key" },
-    basePath: { type: String, attribute: "base-path" },
-    _ready: { type: Boolean, state: true },
-    _rateStatus: { type: String, state: true },
-    _results: { type: Array, state: true },
-    _totals: { type: Array, state: true },
-  };
+	static properties = {
+		content: { type: String },
+		minimal: { type: Boolean },
+		readonly: { type: Boolean },
+		norates: { type: Boolean },
+		autosave: { type: Boolean },
+		storageKey: { type: String, attribute: "storage-key" },
+		basePath: { type: String, attribute: "base-path" },
+		_ready: { type: Boolean, state: true },
+		_rateStatus: { type: String, state: true },
+		_results: { type: Array, state: true },
+		_totals: { type: Array, state: true },
+	};
 
-  constructor() {
-    super();
-    this.content = "";
-    this.minimal = false;
-    this.readonly = false;
-    this.norates = false;
-    this.autosave = false;
-    this.storageKey = STORAGE_KEY;
-    this.basePath = "";
-    this._ready = false;
-    this._rateStatus = "idle";
-    this._results = [];
-    this._totals = [];
-    this._engine = null;
-    this._jar = null;
-    this._saveTimeout = null;
-  }
+	constructor() {
+		super();
+		this.content = "";
+		this.minimal = false;
+		this.readonly = false;
+		this.norates = false;
+		this.autosave = false;
+		this.storageKey = STORAGE_KEY;
+		this.basePath = "";
+		this._ready = false;
+		this._rateStatus = "idle";
+		this._results = [];
+		this._totals = [];
+		this._engine = null;
+		this._jar = null;
+		this._saveTimeout = null;
+	}
 
-  // Use Light DOM for contenteditable compatibility
-  createRenderRoot() {
-    return this;
-  }
+	// Use Light DOM for contenteditable compatibility
+	createRenderRoot() {
+		return this;
+	}
 
-  connectedCallback() {
-    super.connectedCallback();
-    injectStyles();
-    this._init();
-  }
+	connectedCallback() {
+		super.connectedCallback();
+		injectStyles();
+		this._init();
+	}
 
-  disconnectedCallback() {
-    super.disconnectedCallback();
-    if (this._saveTimeout) {
-      clearTimeout(this._saveTimeout);
-      // Flush pending save
-      if (this.autosave && this._jar) {
-        localStorage.setItem(this.storageKey, this._jar.toString());
-      }
-    }
-    this._jar?.destroy();
-    this._jar = null;
-    this._engine?.free();
-    this._engine = null;
-  }
+	disconnectedCallback() {
+		super.disconnectedCallback();
+		if (this._saveTimeout) {
+			clearTimeout(this._saveTimeout);
+			// Flush pending save
+			if (this.autosave && this._jar) {
+				localStorage.setItem(this.storageKey, this._jar.toString());
+			}
+		}
+		this._jar?.destroy();
+		this._jar = null;
+		this._engine?.free();
+		this._engine = null;
+	}
 
-  // ============================================================================
-  // Initialization
-  // ============================================================================
+	// ============================================================================
+	// Initialization
+	// ============================================================================
 
-  async _init() {
-    try {
-      await loadWasm(this.basePath);
-      this._engine = new WasmEngine();
+	async _init() {
+		try {
+			const { WasmEngine, tokenize } = await loadNumrWasm({
+				basePath: this.basePath,
+				version: VERSION,
+			});
+			tokenizeFn = tokenize;
+			this._engine = new WasmEngine();
 
-      // Load cached rates (skip if norates)
-      if (!this.norates) {
-        const timestamp = localStorage.getItem(RATES_TIMESTAMP_KEY);
-        if (timestamp && Date.now() - parseInt(timestamp) < RATES_CACHE_TTL) {
-          const cached = localStorage.getItem(RATES_KEY);
-          if (cached) {
-            this._engine.apply_rates(cached);
-            this._rateStatus = "success";
-          }
-        } else {
-          this._fetchRates();
-        }
-      }
+			// Load cached rates (skip if norates)
+			if (!this.norates) {
+				const timestamp = localStorage.getItem(RATES_TIMESTAMP_KEY);
+				if (timestamp && Date.now() - parseInt(timestamp) < RATES_CACHE_TTL) {
+					const cached = localStorage.getItem(RATES_KEY);
+					if (cached) {
+						this._engine.apply_rates(cached);
+						this._rateStatus = "success";
+					}
+				} else {
+					this._fetchRates();
+				}
+			}
 
-      this._ready = true;
-      this.requestUpdate();
+			this._ready = true;
+			this.requestUpdate();
 
-      // Wait for render, then init CodeJar
-      await this.updateComplete;
-      this._initEditor();
+			// Wait for render, then init CodeJar
+			await this.updateComplete;
+			this._initEditor();
 
-      this.dispatchEvent(new CustomEvent("numr-ready", { bubbles: true }));
-    } catch (e) {
-      console.error("numr-calculator: Failed to initialize", e);
-    }
-  }
+			this.dispatchEvent(new CustomEvent("numr-ready", { bubbles: true }));
+		} catch (e) {
+			console.error("numr-calculator: Failed to initialize", e);
+		}
+	}
 
-  _initEditor() {
-    const editor = this.querySelector(".numr-editor");
-    if (!editor) return;
+	_initEditor() {
+		const editor = this.querySelector(".numr-editor");
+		if (!editor) return;
 
-    this._jar = CodeJar(editor, (el) => this._highlight(el), {
-      tab: "  ",
-      spellcheck: false,
-      catchTab: false,
-      preserveIdent: false,
-      addClosing: true,
-      autoclose: { open: "(", close: ")" },
-    });
+		this._jar = CodeJar(editor, (el) => this._highlight(el), {
+			tab: "  ",
+			spellcheck: false,
+			catchTab: false,
+			preserveIdent: false,
+			addClosing: true,
+			autoclose: { open: "(", close: ")" },
+		});
 
-    // Load content
-    const initialContent =
-      this.content ||
-      (this.autosave ? localStorage.getItem(this.storageKey) : null) ||
-      DEFAULT_CONTENT;
+		// Load content
+		const initialContent =
+			this.content ||
+			(this.autosave ? localStorage.getItem(this.storageKey) : null) ||
+			DEFAULT_CONTENT;
 
-    this._jar.updateCode(initialContent);
-    this._jar.onUpdate(() => this._evaluate());
-    this._evaluate();
-  }
+		this._jar.updateCode(initialContent);
+		this._jar.onUpdate(() => this._evaluate());
+		this._evaluate();
+	}
 
-  // ============================================================================
-  // Exchange Rates
-  // ============================================================================
+	// ============================================================================
+	// Exchange Rates
+	// ============================================================================
 
-  async _fetchRates() {
-    this._rateStatus = "loading";
-    this.requestUpdate();
+	async _fetchRates() {
+		this._rateStatus = "loading";
+		this.requestUpdate();
 
-    try {
-      const [fiat, crypto] = await Promise.all([
-        fetch("https://open.er-api.com/v6/latest/USD")
-          .then((r) => r.json())
-          .then((d) => d.rates || {})
-          .catch(() => ({})),
-        fetch(
-          `https://api.coingecko.com/api/v3/simple/price?ids=${Object.values(CRYPTO_IDS).join(",")}&vs_currencies=usd`,
-        )
-          .then((r) => r.json())
-          .then((data) => {
-            const rates = {};
-            for (const [code, id] of Object.entries(CRYPTO_IDS)) {
-              if (data[id]?.usd) rates[code] = data[id].usd;
-            }
-            return rates;
-          })
-          .catch(() => ({})),
-      ]);
+		try {
+			const [fiat, crypto] = await Promise.all([
+				fetch("https://open.er-api.com/v6/latest/USD")
+					.then((r) => r.json())
+					.then((d) => d.rates || {})
+					.catch(() => ({})),
+				fetch(
+					`https://api.coingecko.com/api/v3/simple/price?ids=${Object.values(CRYPTO_IDS).join(",")}&vs_currencies=usd`,
+				)
+					.then((r) => r.json())
+					.then((data) => {
+						const rates = {};
+						for (const [code, id] of Object.entries(CRYPTO_IDS)) {
+							if (data[id]?.usd) rates[code] = data[id].usd;
+						}
+						return rates;
+					})
+					.catch(() => ({})),
+			]);
 
-      const rates = { ...fiat, ...crypto };
+			const rates = { ...fiat, ...crypto };
 
-      if (Object.keys(rates).length > 0) {
-        const json = JSON.stringify(rates);
-        this._engine.apply_rates(json);
-        localStorage.setItem(RATES_KEY, json);
-        localStorage.setItem(RATES_TIMESTAMP_KEY, Date.now().toString());
-        this._rateStatus = "success";
-        this._evaluate();
-      } else {
-        this._rateStatus = "error";
-      }
-    } catch (e) {
-      console.warn("numr-calculator: Failed to fetch rates", e);
-      this._rateStatus = "error";
-    }
+			if (Object.keys(rates).length > 0) {
+				const json = JSON.stringify(rates);
+				this._engine.apply_rates(json);
+				localStorage.setItem(RATES_KEY, json);
+				localStorage.setItem(RATES_TIMESTAMP_KEY, Date.now().toString());
+				this._rateStatus = "success";
+				this._evaluate();
+			} else {
+				this._rateStatus = "error";
+			}
+		} catch (e) {
+			console.warn("numr-calculator: Failed to fetch rates", e);
+			this._rateStatus = "error";
+		}
 
-    this.requestUpdate();
-  }
+		this.requestUpdate();
+	}
 
-  // ============================================================================
-  // Core Logic
-  // ============================================================================
+	// ============================================================================
+	// Core Logic
+	// ============================================================================
 
-  _evaluate() {
-    if (!this._engine || !this._jar) return;
+	_evaluate() {
+		if (!this._engine || !this._jar) return;
 
-    const content = this._jar.toString();
+		const content = this._jar.toString();
 
-    if (this.autosave) {
-      // Debounce localStorage writes
-      if (this._saveTimeout) clearTimeout(this._saveTimeout);
-      this._saveTimeout = setTimeout(() => {
-        localStorage.setItem(this.storageKey, content);
-      }, 300);
-    }
+		if (this.autosave) {
+			// Debounce localStorage writes
+			if (this._saveTimeout) clearTimeout(this._saveTimeout);
+			this._saveTimeout = setTimeout(() => {
+				localStorage.setItem(this.storageKey, content);
+			}, 300);
+		}
 
-    try {
-      this._results = JSON.parse(this._engine.eval_document(content));
-      this._totals = JSON.parse(this._engine.get_totals());
-    } catch (e) {
-      console.error("numr-calculator: Evaluation error", e);
-      this._results = [];
-      this._totals = [];
-    }
+		try {
+			this._results = JSON.parse(this._engine.eval_document(content));
+			this._totals = JSON.parse(this._engine.get_totals());
+		} catch (e) {
+			console.error("numr-calculator: Evaluation error", e);
+			this._results = [];
+			this._totals = [];
+		}
 
-    this.requestUpdate();
+		this.requestUpdate();
 
-    this.dispatchEvent(
-      new CustomEvent("numr-change", {
-        bubbles: true,
-        detail: { content, results: this._results, totals: this._totals },
-      }),
-    );
-  }
+		this.dispatchEvent(
+			new CustomEvent("numr-change", {
+				bubbles: true,
+				detail: { content, results: this._results, totals: this._totals },
+			}),
+		);
+	}
 
-  _highlight(editor) {
-    const code = editor.textContent || "";
-    if (!code || !tokenizeFn) {
-      editor.innerHTML = this._escapeHtml(code) || "\n";
-      return;
-    }
+	_highlight(editor) {
+		const code = editor.textContent || "";
+		if (!code || !tokenizeFn) {
+			this._setHtml(editor, this._escapeHtml(code) || "\n");
+			return;
+		}
 
-    const knownVars = this._getKnownVariables();
-    const lines = code.split("\n");
+		const knownVars = this._getKnownVariables();
+		const lines = code.split("\n");
 
-    const htmlContent = lines
-      .map((line, i) => {
-        if (!line) return i < lines.length - 1 ? "\n" : "";
-        return (
-          this._renderTokens(line, knownVars) +
-          (i < lines.length - 1 ? "\n" : "")
-        );
-      })
-      .join("");
+		const htmlContent = lines
+			.map((line, i) => {
+				if (!line) return i < lines.length - 1 ? "\n" : "";
+				return (
+					this._renderTokens(line, knownVars) +
+					(i < lines.length - 1 ? "\n" : "")
+				);
+			})
+			.join("");
 
-    editor.innerHTML = htmlContent || "\n";
-  }
+		this._setHtml(editor, htmlContent || "\n");
+	}
 
-  _getKnownVariables() {
-    if (!this._engine) return null;
-    try {
-      const vars = JSON.parse(this._engine.get_variables());
-      return new Set(vars.map((v) => v.name));
-    } catch {
-      return null;
-    }
-  }
+	_getKnownVariables() {
+		if (!this._engine) return null;
+		try {
+			const vars = JSON.parse(this._engine.get_variables());
+			return new Set(vars.map((v) => v.name));
+		} catch {
+			return null;
+		}
+	}
 
-  _renderTokens(text, knownVars = null) {
-    if (!text || !tokenizeFn) return this._escapeHtml(text);
+	_renderTokens(text, knownVars = null) {
+		if (!text || !tokenizeFn) return this._escapeHtml(text);
 
-    try {
-      const tokens = JSON.parse(tokenizeFn(text));
-      let htmlContent = "";
-      for (const t of tokens) {
-        let type = t.token_type;
-        if (type === "text" && knownVars?.has(t.text)) {
-          type = "variable";
-        }
-        htmlContent +=
-          type === "whitespace"
-            ? this._escapeHtml(t.text)
-            : `<span class="numr-token-${type}">${this._escapeHtml(t.text)}</span>`;
-      }
-      return htmlContent || this._escapeHtml(text);
-    } catch {
-      return this._escapeHtml(text);
-    }
-  }
+		try {
+			const tokens = JSON.parse(tokenizeFn(text));
+			let htmlContent = "";
+			for (const t of tokens) {
+				let type = t.token_type;
+				if (type === "text" && knownVars?.has(t.text)) {
+					type = "variable";
+				}
+				htmlContent +=
+					type === "whitespace"
+						? this._escapeHtml(t.text)
+						: `<span class="numr-token-${type}">${this._escapeHtml(t.text)}</span>`;
+			}
+			return htmlContent || this._escapeHtml(text);
+		} catch {
+			return this._escapeHtml(text);
+		}
+	}
 
-  _escapeHtml(text) {
-    if (!text) return "";
-    return text
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
-  }
+	_setHtml(element, html) {
+		const range = document.createRange();
+		range.selectNodeContents(element);
+		element.replaceChildren(range.createContextualFragment(html));
+	}
 
-  // ============================================================================
-  // Public API
-  // ============================================================================
+	_escapeHtml(text) {
+		if (!text) return "";
+		return text
+			.replace(/&/g, "&amp;")
+			.replace(/</g, "&lt;")
+			.replace(/>/g, "&gt;");
+	}
 
-  /** Get current content */
-  getContent() {
-    return this._jar?.toString() || "";
-  }
+	// ============================================================================
+	// Public API
+	// ============================================================================
 
-  /** Set content programmatically */
-  setContent(content) {
-    this._jar?.updateCode(content);
-  }
+	/** Get current content */
+	getContent() {
+		return this._jar?.toString() || "";
+	}
 
-  /** Clear the document */
-  clear() {
-    this._engine?.clear();
-    this._jar?.updateCode("");
-    this._evaluate();
-  }
+	/** Set content programmatically */
+	setContent(content) {
+		this._jar?.updateCode(content);
+	}
 
-  /** Refresh exchange rates */
-  refreshRates() {
-    if (this._rateStatus !== "loading") {
-      this._fetchRates();
-    }
-  }
+	/** Clear the document */
+	clear() {
+		this._engine?.clear();
+		this._jar?.updateCode("");
+		this._evaluate();
+	}
 
-  /** Focus the editor */
-  focus() {
-    this.querySelector(".numr-editor")?.focus();
-  }
+	/** Refresh exchange rates */
+	refreshRates() {
+		if (this._rateStatus !== "loading") {
+			this._fetchRates();
+		}
+	}
 
-  // ============================================================================
-  // Render
-  // ============================================================================
+	/** Focus the editor */
+	focus() {
+		this.querySelector(".numr-editor")?.focus();
+	}
 
-  render() {
-    if (!this._ready) {
-      return html`
+	// ============================================================================
+	// Render
+	// ============================================================================
+
+	render() {
+		if (!this._ready) {
+			return html`
         <div class="numr-container" part="container">
           <div class="numr-loading">
             <div class="numr-loading-spinner"></div>
@@ -694,11 +667,11 @@ export class NumrCalculator extends LitElement {
           </div>
         </div>
       `;
-    }
+		}
 
-    const lineCount = this._jar?.toString().split("\n").length || 1;
+		const lineCount = this._jar?.toString().split("\n").length || 1;
 
-    return html`
+		return html`
       <div class="numr-container" part="container">
         ${!this.minimal ? this._renderHeader() : nothing}
 
@@ -719,10 +692,10 @@ export class NumrCalculator extends LitElement {
         ${!this.minimal ? this._renderFooter() : nothing}
       </div>
     `;
-  }
+	}
 
-  _renderHeader() {
-    return html`
+	_renderHeader() {
+		return html`
       <header class="numr-header" part="header">
         <div class="numr-logo">numr</div>
         <div class="numr-actions">
@@ -749,53 +722,53 @@ export class NumrCalculator extends LitElement {
         </div>
       </header>
     `;
-  }
+	}
 
-  _renderFooter() {
-    if (!this._totals.length) {
-      return html`<footer class="numr-footer" part="footer"></footer>`;
-    }
+	_renderFooter() {
+		if (!this._totals.length) {
+			return html`<footer class="numr-footer" part="footer"></footer>`;
+		}
 
-    return html`
+		return html`
       <footer class="numr-footer" part="footer">
         <span class="numr-total-label">total:</span>
         ${this._totals.map(
-          (t) => html`
+					(t) => html`
             <span class="numr-total-value"
               >${unsafeHTML(this._renderTokens(t))}</span
             >
           `,
-        )}
+				)}
       </footer>
     `;
-  }
+	}
 
-  _renderLineNumbers(count) {
-    const lines = [];
-    for (let i = 1; i <= count; i++) {
-      const r = this._results[i - 1];
-      if (r?.is_error) {
-        lines.push(html`
+	_renderLineNumbers(count) {
+		const lines = [];
+		for (let i = 1; i <= count; i++) {
+			const r = this._results[i - 1];
+			if (r?.is_error) {
+				lines.push(html`
           <div class="numr-line numr-error" title="${r.result}">
             <span class="numr-error-bullet"></span>${i}
           </div>
         `);
-      } else {
-        lines.push(html`<div class="numr-line">${i}</div>`);
-      }
-    }
-    return lines;
-  }
+			} else {
+				lines.push(html`<div class="numr-line">${i}</div>`);
+			}
+		}
+		return lines;
+	}
 
-  _renderResults() {
-    return this._results.map((r) =>
-      r.is_empty || r.is_error
-        ? html`<div class="numr-line"></div>`
-        : html`<div class="numr-line">
+	_renderResults() {
+		return this._results.map((r) =>
+			r.is_empty || r.is_error
+				? html`<div class="numr-line"></div>`
+				: html`<div class="numr-line">
             ${unsafeHTML(this._renderTokens(r.result))}
           </div>`,
-    );
-  }
+		);
+	}
 }
 
 // Register the component

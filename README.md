@@ -7,7 +7,7 @@ Web interface for the numr calculator, powered by WebAssembly.
 Use `<numr-calculator>` anywhere:
 
 ```html
-<script type="module" src="https://numr.cc/numr-calculator.js?v=76b8714b5b"></script>
+<script type="module" src="https://numr.cc/numr-calculator.js?v=a9a4ada839"></script>
 
 <numr-calculator></numr-calculator>
 ```
@@ -90,6 +90,8 @@ npm run build
 ```
 
 `npm run stamp:assets` refreshes the generated `?v=` asset query strings after JS, CSS, icon, or WASM changes.
+
+Desktop smoke test: `bun install && bun run desktop:build` builds `build/dev-macos-arm64/numr-dev.app` on macOS.
 
 ## Features
 

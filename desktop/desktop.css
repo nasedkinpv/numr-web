@@ -1,0 +1,11 @@
+body.desktop header {
+	min-height: 2.4rem;
+	padding-top: 0.55rem;
+	padding-left: 5rem;
+}
+
+body.desktop .logo,
+body.desktop .actions button {
+	-webkit-user-select: none;
+	user-select: none;
+}

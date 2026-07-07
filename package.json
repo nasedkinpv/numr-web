@@ -18,6 +18,8 @@
     "build:wasm": "npm run build:core && npm run build:editor",
     "stamp:assets": "node scripts/stamp-asset-versions.mjs",
     "build": "npm run clean && npm run build:wasm && npm run stamp:assets",
+    "desktop:dev": "bun run build && electrobun dev",
+    "desktop:build": "bun run build && electrobun build",
     "serve": "python3 -m http.server 8080",
     "start": "npm run build && npm run serve"
   },
@@ -34,5 +36,11 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/nasedkinpv/numr-web"
+  },
+  "dependencies": {
+    "electrobun": "^1.18.1"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
   }
 }

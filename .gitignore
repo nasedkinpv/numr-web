@@ -3,6 +3,7 @@
 
 # Node (if any local dev)
 node_modules/
+build/
 
 # IDE
 .idea/
