@@ -14,12 +14,9 @@
     /* Cool muted palette */
     --bg-primary: #1a1c1e;
     --bg-secondary: #1f2225;
-    --bg-tertiary: #2a2e32;
     --text-primary: #e8eaed;
-    --text-secondary: #a8adb3;
     --text-muted: #6b7280;
     --accent: #a8b4f4;        /* Pale blue */
-    --accent-alt: #c4b5fd;    /* Pale lavender */
     --success: #7dd3a8;       /* Cool mint */
     --error: #f4a8a8;         /* Pale rose */
     --border: #2a2e32;
@@ -28,7 +25,6 @@
     --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, 'Cascadia Code', 'Consolas', 'Liberation Mono', Menlo, Monaco, monospace;
     --font-size: clamp(0.75rem, 1.2vw + 0.4rem, 0.875rem);  /* 12px-14px, fluid */
     --line-height: 1.5em;  /* Relative to font-size */
-    --padding: 0.5rem;
 }
 
 /* Reset */
@@ -105,11 +101,11 @@ header {
     opacity: 0.8;
     animation: crt-shimmer 8s ease-in-out infinite;
     pointer-events: none;
-    mask-image: url('NUMR.svg?v=d65f1f804f');
+    mask-image: url('NUMR.svg');
     mask-size: contain;
     mask-repeat: no-repeat;
     mask-position: center;
-    -webkit-mask-image: url('NUMR.svg?v=d65f1f804f');
+    -webkit-mask-image: url('NUMR.svg');
     -webkit-mask-size: contain;
     -webkit-mask-repeat: no-repeat;
     -webkit-mask-position: center;
@@ -323,7 +319,6 @@ footer {
 }
 
 .total-label { color: var(--text-muted); }
-.total-value { color: var(--success); font-weight: 500; }
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 8px; height: 8px; }

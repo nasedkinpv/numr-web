@@ -17,11 +17,24 @@ export class WasmEngine {
     /**
      * Apply exchange rates from JSON object: {"EUR": 0.92, "BTC": 95000, ...}
      * @param {string} rates_json
+     * @returns {number}
      */
     apply_rates(rates_json) {
-        const ptr0 = passStringToWasm0(rates_json, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
-        const len0 = WASM_VECTOR_LEN;
-        wasm.wasmengine_apply_rates(this.__wbg_ptr, ptr0, len0);
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            const ptr0 = passStringToWasm0(rates_json, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
+            const len0 = WASM_VECTOR_LEN;
+            wasm.wasmengine_apply_rates(retptr, this.__wbg_ptr, ptr0, len0);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+            if (r2) {
+                throw takeObject(r1);
+            }
+            return r0 >>> 0;
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
     }
     /**
      * Clear all state
@@ -76,6 +89,29 @@ export class WasmEngine {
         }
     }
     /**
+     * Evaluate a document and return results, totals, and variable names together.
+     * @param {string} content
+     * @returns {string}
+     */
+    eval_document_full(content) {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            const ptr0 = passStringToWasm0(content, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
+            const len0 = WASM_VECTOR_LEN;
+            wasm.wasmengine_eval_document_full(retptr, this.__wbg_ptr, ptr0, len0);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            deferred2_0 = r0;
+            deferred2_1 = r1;
+            return getStringFromWasm0(r0, r1);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+            wasm.__wbindgen_export(deferred2_0, deferred2_1, 1);
+        }
+    }
+    /**
      * Evaluate without storing the result (for live preview)
      * @param {string} input
      * @returns {string}
@@ -96,6 +132,26 @@ export class WasmEngine {
         } finally {
             wasm.__wbindgen_add_to_stack_pointer(16);
             wasm.__wbindgen_export(deferred2_0, deferred2_1, 1);
+        }
+    }
+    /**
+     * Currency and rate-provider metadata from the core registry.
+     * @returns {string}
+     */
+    get_currency_catalog() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            wasm.wasmengine_get_currency_catalog(retptr, this.__wbg_ptr);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            deferred1_0 = r0;
+            deferred1_1 = r1;
+            return getStringFromWasm0(r0, r1);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+            wasm.__wbindgen_export(deferred1_0, deferred1_1, 1);
         }
     }
     /**
@@ -128,6 +184,26 @@ export class WasmEngine {
         try {
             const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
             wasm.wasmengine_get_totals(retptr, this.__wbg_ptr);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            deferred1_0 = r0;
+            deferred1_1 = r1;
+            return getStringFromWasm0(r0, r1);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+            wasm.__wbindgen_export(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * Get user variable names, one per line.
+     * @returns {string}
+     */
+    get_variable_names() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            wasm.wasmengine_get_variable_names(retptr, this.__wbg_ptr);
             var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
             var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
             deferred1_0 = r0;
@@ -203,6 +279,11 @@ function __wbg_get_imports() {
             const len1 = WASM_VECTOR_LEN;
             getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
             getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
+        },
+        __wbindgen_cast_0000000000000001: function(arg0, arg1) {
+            // Cast intrinsic for `Ref(String) -> Externref`.
+            const ret = getStringFromWasm0(arg0, arg1);
+            return addHeapObject(ret);
         },
         __wbindgen_object_drop_ref: function(arg0) {
             takeObject(arg0);

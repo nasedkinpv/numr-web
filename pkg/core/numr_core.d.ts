@@ -10,7 +10,7 @@ export class WasmEngine {
     /**
      * Apply exchange rates from JSON object: {"EUR": 0.92, "BTC": 95000, ...}
      */
-    apply_rates(rates_json: string): void;
+    apply_rates(rates_json: string): number;
     /**
      * Clear all state
      */
@@ -24,9 +24,17 @@ export class WasmEngine {
      */
     eval_document(content: string): string;
     /**
+     * Evaluate a document and return results, totals, and variable names together.
+     */
+    eval_document_full(content: string): string;
+    /**
      * Evaluate without storing the result (for live preview)
      */
     eval_preview(input: string): string;
+    /**
+     * Currency and rate-provider metadata from the core registry.
+     */
+    get_currency_catalog(): string;
     /**
      * Get all line results as JSON
      */
@@ -35,6 +43,10 @@ export class WasmEngine {
      * Get grouped totals as JSON
      */
     get_totals(): string;
+    /**
+     * Get user variable names, one per line.
+     */
+    get_variable_names(): string;
     /**
      * Get all variables as JSON
      */
@@ -55,13 +67,16 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_wasmengine_free: (a: number, b: number) => void;
-    readonly wasmengine_apply_rates: (a: number, b: number, c: number) => void;
+    readonly wasmengine_apply_rates: (a: number, b: number, c: number, d: number) => void;
     readonly wasmengine_clear: (a: number) => void;
     readonly wasmengine_eval: (a: number, b: number, c: number, d: number) => void;
     readonly wasmengine_eval_document: (a: number, b: number, c: number, d: number) => void;
+    readonly wasmengine_eval_document_full: (a: number, b: number, c: number, d: number) => void;
     readonly wasmengine_eval_preview: (a: number, b: number, c: number, d: number) => void;
+    readonly wasmengine_get_currency_catalog: (a: number, b: number) => void;
     readonly wasmengine_get_lines: (a: number, b: number) => void;
     readonly wasmengine_get_totals: (a: number, b: number) => void;
+    readonly wasmengine_get_variable_names: (a: number, b: number) => void;
     readonly wasmengine_get_variables: (a: number, b: number) => void;
     readonly wasmengine_new: () => number;
     readonly init: () => void;

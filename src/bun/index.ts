@@ -4,6 +4,7 @@ import Electrobun, {
 	BrowserWindow,
 	Utils,
 } from "electrobun/bun";
+import { fileURLToPath } from "node:url";
 
 type OpenDocumentPayload = { content: string; path: string };
 
@@ -105,25 +106,17 @@ const win = new BrowserWindow({
 	rpc,
 });
 
-function fileUrlToPath(fileUrl: string) {
-	try {
-		const pathname = decodeURIComponent(new URL(fileUrl).pathname);
-		return process.platform === "win32"
-			? pathname.replace(/^\/([A-Za-z]:)/, "$1")
-			: pathname;
-	} catch {
-		return null;
-	}
-}
-
 async function openPath(path: string) {
 	const content = await Bun.file(path).text();
 	sendOpenDocument({ content, path });
 }
 
 async function openFileUrl(fileUrl: string) {
-	const path = fileUrlToPath(fileUrl);
-	if (path) await openPath(path);
+	try {
+		await openPath(fileURLToPath(fileUrl));
+	} catch (error) {
+		console.error("Failed to open file URL", error);
+	}
 }
 
 async function openDocumentDialog() {

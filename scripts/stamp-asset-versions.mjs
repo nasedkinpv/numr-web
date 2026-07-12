@@ -57,6 +57,11 @@ const assetVersions = {
 	appleTouch: hashFile("apple-touch-icon.png"),
 };
 
+// wasm-pack creates nested `*` .gitignore files. An explicit .npmignore keeps
+// generated bindings publishable while retaining those repository defaults.
+writeText("pkg/core/.npmignore", "# Generated WASM package files are published.\n");
+writeText("pkg/editor/.npmignore", "# Generated WASM package files are published.\n");
+
 const wasmAssetVersion = hashFiles([
 	"pkg/core/numr_core.js",
 	"pkg/core/numr_core_bg.wasm",
@@ -88,7 +93,7 @@ let styleCss = readText("style.css");
 styleCss = replaceRequired(
 	styleCss,
 	/url\('NUMR\.svg(?:\?v=[^']+)?'\)/g,
-	`url('NUMR.svg?v=${assetVersions.logo}')`,
+	"url('NUMR.svg')",
 	"style.css NUMR.svg references",
 );
 const styleVersion = shortHash([Buffer.from(styleCss)]);

@@ -11,11 +11,17 @@ export function init(): void;
  */
 export function tokenize(input: string): string;
 
+/**
+ * Tokenize a line and promote known variable references.
+ */
+export function tokenizeWithVariables(input: string, variable_names: string): string;
+
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly tokenize: (a: number, b: number, c: number) => void;
+    readonly tokenizeWithVariables: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly init: () => void;
     readonly __wbindgen_export: (a: number, b: number, c: number) => void;
     readonly __wbindgen_export2: (a: number, b: number) => number;

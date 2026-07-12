@@ -1,9 +1,13 @@
 {
   "name": "numr-editor",
   "type": "module",
-  "description": "Syntax highlighting and text buffer for numr calculator",
-  "version": "0.6.0",
+  "description": "Shared syntax highlighting and text primitives for numr frontends",
+  "version": "0.7.0",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nasedkinpv/numr"
+  },
   "files": [
     "numr_editor_bg.wasm",
     "numr_editor.js",

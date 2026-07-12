@@ -29,17 +29,20 @@
 import { LitElement, html, nothing } from "https://esm.sh/lit@3";
 import { unsafeHTML } from "https://esm.sh/lit@3/directives/unsafe-html.js";
 import { CodeJar } from "https://esm.sh/codejar@4.3.0";
-import { loadNumrWasm } from "./src/shared/wasm-loader.js";
+import { NumrSession } from "./src/shared/numr-session.js";
+import { RatesService } from "./src/shared/rates-service.js";
+import {
+	escapeHtml,
+	renderTokens,
+	replaceHtml,
+} from "./src/shared/token-renderer.js";
 
 // ============================================================================
 // Constants
 // ============================================================================
 
-const VERSION = "818e648755";
+const VERSION = "6f90bf54d1";
 const STORAGE_KEY = "numr-document";
-const RATES_KEY = "numr-rates";
-const RATES_TIMESTAMP_KEY = "numr-rates-timestamp";
-const RATES_CACHE_TTL = 60 * 60 * 1000; // 1 hour
 
 const DEFAULT_CONTENT = `# Quick calculations
 100 + 50
@@ -53,24 +56,6 @@ _ / 3                      // _ references previous result
 # Currency (live rates)
 100 USD in EUR
 `;
-
-const CRYPTO_IDS = {
-	BTC: "bitcoin",
-	ETH: "ethereum",
-	SOL: "solana",
-	USDT: "tether",
-	USDC: "usd-coin",
-	BNB: "binancecoin",
-	XRP: "ripple",
-	ADA: "cardano",
-	DOGE: "dogecoin",
-	DOT: "polkadot",
-	LTC: "litecoin",
-	LINK: "chainlink",
-	AVAX: "avalanche-2",
-	MATIC: "polygon-ecosystem-token",
-	TON: "the-open-network",
-};
 
 // ============================================================================
 // Styles (injected once per document)
@@ -338,8 +323,6 @@ function injectStyles() {
 // WASM Module Loading (shared across instances)
 // ============================================================================
 
-let tokenizeFn = null;
-
 // ============================================================================
 // NumrCalculator Component
 // ============================================================================
@@ -372,9 +355,11 @@ export class NumrCalculator extends LitElement {
 		this._rateStatus = "idle";
 		this._results = [];
 		this._totals = [];
-		this._engine = null;
+		this._session = null;
+		this._ratesService = null;
 		this._jar = null;
 		this._saveTimeout = null;
+		this._generation = 0;
 	}
 
 	// Use Light DOM for contenteditable compatibility
@@ -385,11 +370,12 @@ export class NumrCalculator extends LitElement {
 	connectedCallback() {
 		super.connectedCallback();
 		injectStyles();
-		this._init();
+		this._init(++this._generation);
 	}
 
 	disconnectedCallback() {
 		super.disconnectedCallback();
+		this._generation += 1;
 		if (this._saveTimeout) {
 			clearTimeout(this._saveTimeout);
 			// Flush pending save
@@ -399,35 +385,48 @@ export class NumrCalculator extends LitElement {
 		}
 		this._jar?.destroy();
 		this._jar = null;
-		this._engine?.free();
-		this._engine = null;
+		this._ratesService?.dispose();
+		this._ratesService = null;
+		this._session?.dispose();
+		this._session = null;
 	}
 
 	// ============================================================================
 	// Initialization
 	// ============================================================================
 
-	async _init() {
+	async _init(generation) {
 		try {
-			const { WasmEngine, tokenize } = await loadNumrWasm({
+			const session = await NumrSession.create({
 				basePath: this.basePath,
 				version: VERSION,
 			});
-			tokenizeFn = tokenize;
-			this._engine = new WasmEngine();
+			if (generation !== this._generation) {
+				session.dispose();
+				return;
+			}
+			this._session = session;
+			const ratesService = new RatesService(session);
+			this._ratesService = ratesService;
 
 			// Load cached rates (skip if norates)
 			if (!this.norates) {
-				const timestamp = localStorage.getItem(RATES_TIMESTAMP_KEY);
-				if (timestamp && Date.now() - parseInt(timestamp) < RATES_CACHE_TTL) {
-					const cached = localStorage.getItem(RATES_KEY);
-					if (cached) {
-						this._engine.apply_rates(cached);
+				this._rateStatus = "loading";
+				ratesService
+					.initialize()
+					.then(() => {
+						if (generation !== this._generation) return;
 						this._rateStatus = "success";
-					}
-				} else {
-					this._fetchRates();
-				}
+						this._evaluate();
+					})
+					.catch((error) => {
+						if (generation !== this._generation) return;
+						console.warn("numr-calculator: Failed to fetch rates", error);
+						this._rateStatus = "error";
+					})
+					.finally(() => {
+						if (generation === this._generation) this.requestUpdate();
+					});
 			}
 
 			this._ready = true;
@@ -435,6 +434,7 @@ export class NumrCalculator extends LitElement {
 
 			// Wait for render, then init CodeJar
 			await this.updateComplete;
+			if (generation !== this._generation) return;
 			this._initEditor();
 
 			this.dispatchEvent(new CustomEvent("numr-ready", { bubbles: true }));
@@ -472,42 +472,18 @@ export class NumrCalculator extends LitElement {
 	// ============================================================================
 
 	async _fetchRates() {
+		if (!this._ratesService || this._rateStatus === "loading") return;
+		const ratesService = this._ratesService;
 		this._rateStatus = "loading";
 		this.requestUpdate();
 
 		try {
-			const [fiat, crypto] = await Promise.all([
-				fetch("https://open.er-api.com/v6/latest/USD")
-					.then((r) => r.json())
-					.then((d) => d.rates || {})
-					.catch(() => ({})),
-				fetch(
-					`https://api.coingecko.com/api/v3/simple/price?ids=${Object.values(CRYPTO_IDS).join(",")}&vs_currencies=usd`,
-				)
-					.then((r) => r.json())
-					.then((data) => {
-						const rates = {};
-						for (const [code, id] of Object.entries(CRYPTO_IDS)) {
-							if (data[id]?.usd) rates[code] = data[id].usd;
-						}
-						return rates;
-					})
-					.catch(() => ({})),
-			]);
-
-			const rates = { ...fiat, ...crypto };
-
-			if (Object.keys(rates).length > 0) {
-				const json = JSON.stringify(rates);
-				this._engine.apply_rates(json);
-				localStorage.setItem(RATES_KEY, json);
-				localStorage.setItem(RATES_TIMESTAMP_KEY, Date.now().toString());
-				this._rateStatus = "success";
-				this._evaluate();
-			} else {
-				this._rateStatus = "error";
-			}
+			await ratesService.refresh();
+			if (this._ratesService !== ratesService) return;
+			this._rateStatus = "success";
+			this._evaluate();
 		} catch (e) {
+			if (this._ratesService !== ratesService) return;
 			console.warn("numr-calculator: Failed to fetch rates", e);
 			this._rateStatus = "error";
 		}
@@ -520,7 +496,7 @@ export class NumrCalculator extends LitElement {
 	// ============================================================================
 
 	_evaluate() {
-		if (!this._engine || !this._jar) return;
+		if (!this._session || !this._jar) return;
 
 		const content = this._jar.toString();
 
@@ -533,10 +509,11 @@ export class NumrCalculator extends LitElement {
 		}
 
 		try {
-			this._results = JSON.parse(this._engine.eval_document(content));
-			this._totals = JSON.parse(this._engine.get_totals());
-		} catch (e) {
-			console.error("numr-calculator: Evaluation error", e);
+			const evaluation = this._session.evaluateDocument(content);
+			this._results = evaluation.results;
+			this._totals = evaluation.totals;
+		} catch (error) {
+			console.error("numr-calculator: Evaluation error", error);
 			this._results = [];
 			this._totals = [];
 		}
@@ -553,8 +530,8 @@ export class NumrCalculator extends LitElement {
 
 	_highlight(editor) {
 		const code = editor.textContent || "";
-		if (!code || !tokenizeFn) {
-			this._setHtml(editor, this._escapeHtml(code) || "\n");
+		if (!code || !this._session) {
+			replaceHtml(editor, escapeHtml(code) || "\n");
 			return;
 		}
 
@@ -571,53 +548,20 @@ export class NumrCalculator extends LitElement {
 			})
 			.join("");
 
-		this._setHtml(editor, htmlContent || "\n");
+		replaceHtml(editor, htmlContent || "\n");
 	}
 
 	_getKnownVariables() {
-		if (!this._engine) return null;
-		try {
-			const vars = JSON.parse(this._engine.get_variables());
-			return new Set(vars.map((v) => v.name));
-		} catch {
-			return null;
-		}
+		return this._session?.getVariableNames() || "";
 	}
 
 	_renderTokens(text, knownVars = null) {
-		if (!text || !tokenizeFn) return this._escapeHtml(text);
-
-		try {
-			const tokens = JSON.parse(tokenizeFn(text));
-			let htmlContent = "";
-			for (const t of tokens) {
-				let type = t.token_type;
-				if (type === "text" && knownVars?.has(t.text)) {
-					type = "variable";
-				}
-				htmlContent +=
-					type === "whitespace"
-						? this._escapeHtml(t.text)
-						: `<span class="numr-token-${type}">${this._escapeHtml(t.text)}</span>`;
-			}
-			return htmlContent || this._escapeHtml(text);
-		} catch {
-			return this._escapeHtml(text);
-		}
-	}
-
-	_setHtml(element, html) {
-		const range = document.createRange();
-		range.selectNodeContents(element);
-		element.replaceChildren(range.createContextualFragment(html));
-	}
-
-	_escapeHtml(text) {
-		if (!text) return "";
-		return text
-			.replace(/&/g, "&amp;")
-			.replace(/</g, "&lt;")
-			.replace(/>/g, "&gt;");
+		return renderTokens(
+			this._session,
+			text,
+			knownVars || "",
+			"numr-token-",
+		);
 	}
 
 	// ============================================================================
@@ -636,7 +580,7 @@ export class NumrCalculator extends LitElement {
 
 	/** Clear the document */
 	clear() {
-		this._engine?.clear();
+		this._session?.clear();
 		this._jar?.updateCode("");
 		this._evaluate();
 	}

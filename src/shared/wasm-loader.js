@@ -31,8 +31,8 @@ export async function loadNumrWasm({ basePath = "", version = "" } = {}) {
 		);
 		const [coreWasm, editorWasm] = isDesktop
 			? await Promise.all([
-					fetch(coreWasmUrl).then((response) => response.arrayBuffer()),
-					fetch(editorWasmUrl).then((response) => response.arrayBuffer()),
+					fetchWasmBinary(coreWasmUrl),
+					fetchWasmBinary(editorWasmUrl),
 				])
 			: [coreWasmUrl, editorWasmUrl];
 
@@ -44,11 +44,22 @@ export async function loadNumrWasm({ basePath = "", version = "" } = {}) {
 		return {
 			WasmEngine: coreModule.WasmEngine,
 			tokenize: editorModule.tokenize,
+			tokenizeWithVariables: editorModule.tokenizeWithVariables,
 		};
 	})();
 
 	cache.set(cacheKey, promise);
+	promise.catch(() => cache.delete(cacheKey));
 	return promise;
+}
+
+async function fetchWasmBinary(url) {
+	const response = await fetch(url);
+	// WebKit reports successful custom-protocol responses as status 0.
+	if (!response.ok && response.status !== 0) {
+		throw new Error(`Failed to load WASM asset (${response.status}): ${url}`);
+	}
+	return response.arrayBuffer();
 }
 
 function assetUrl(path, basePath, versionSuffix) {

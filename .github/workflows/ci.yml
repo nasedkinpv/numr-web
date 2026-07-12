@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out compatible numr core
+        uses: actions/checkout@v4
+        with:
+          repository: nasedkinpv/numr
+          path: numr
+
+      - name: Check out numr-web
+        uses: actions/checkout@v4
+        with:
+          path: numr/numr-web
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-pack
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Check JavaScript contracts
+        working-directory: numr/numr-web
+        run: npm run check
+
+      - name: Build both WASM packages
+        working-directory: numr/numr-web
+        run: npm run build
+
+      - name: Verify generated bindings and asset stamps are committed
+        working-directory: numr/numr-web
+        run: git diff --exit-code

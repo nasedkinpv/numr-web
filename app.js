@@ -11,24 +11,25 @@
  */
 
 import { CodeJar } from "https://esm.sh/codejar@4.3.0";
-import { loadNumrWasm } from "./src/shared/wasm-loader.js";
+import { NumrSession } from "./src/shared/numr-session.js";
+import { RatesService } from "./src/shared/rates-service.js";
 import {
 	decodeContentFromHash,
 	encodeContentForHash,
 	parseShareHash,
 } from "./src/shared/share-codec.js";
+import {
+	escapeHtml,
+	renderTokens as renderTokenHtml,
+	replaceHtml,
+} from "./src/shared/token-renderer.js";
 
 // ============================================================================
 // Constants
 // ============================================================================
 
 const STORAGE_KEY = "numr-document";
-const RATES_KEY = "numr-rates";
-const RATES_TIMESTAMP_KEY = "numr-rates-timestamp";
-const RATES_CACHE_TTL = 60 * 60 * 1000; // 1 hour
-const WASM_ASSET_VERSION = "818e648755";
-const ANALYTICS_FLUSH_DELAY_MS = 1000;
-const ANALYTICS_MAX_FLUSH_ATTEMPTS = 10;
+const WASM_ASSET_VERSION = "6f90bf54d1";
 const SHARE_DEFAULT_TITLE = "Share document link";
 const SHARE_NATIVE_TITLE = "numr document";
 const SHARE_NATIVE_TEXT = "Shared from numr";
@@ -54,36 +55,23 @@ total = price * quantity
 100 F to C
 2.5 hours to minutes
 
+# Statistics and angles
+median(10, 30, 20)
+clamp(120, 0, 100)
+sin(90°)
+90° to rad
+
 # Currency (live rates)
 1000 USD in EUR
 0.1 BTC in USD
 `;
 
-// Cryptocurrency IDs for CoinGecko API
-const CRYPTO_IDS = {
-	BTC: "bitcoin",
-	ETH: "ethereum",
-	SOL: "solana",
-	USDT: "tether",
-	USDC: "usd-coin",
-	BNB: "binancecoin",
-	XRP: "ripple",
-	ADA: "cardano",
-	DOGE: "dogecoin",
-	DOT: "polkadot",
-	LTC: "litecoin",
-	LINK: "chainlink",
-	AVAX: "avalanche-2",
-	MATIC: "polygon-ecosystem-token",
-	TON: "the-open-network",
-};
-
 // ============================================================================
 // State
 // ============================================================================
 
-let engine = null; // WASM evaluation engine
-let tokenizeFn = null; // WASM tokenizer function
+let session = null;
+let ratesService = null;
 let jar = null; // CodeJar editor instance
 
 // DOM element references (populated in init)
@@ -105,9 +93,6 @@ let rateStatus = "idle"; // 'idle' | 'loading' | 'success' | 'error'
 let shareStatusTimer = null;
 const analyticsState = {
 	initialSource: "example",
-	pendingEvents: [],
-	flushAttempts: 0,
-	flushTimer: null,
 	editorEngagedTracked: false,
 };
 
@@ -119,78 +104,34 @@ const analyticsState = {
  * Initialize WASM modules and fetch exchange rates
  */
 async function initWasm() {
-	const { WasmEngine, tokenize } = await loadNumrWasm({
+	session = await NumrSession.create({
 		version: WASM_ASSET_VERSION,
 	});
-
-	engine = new WasmEngine();
-	tokenizeFn = tokenize;
-
-	// Try to load cached rates first
-	const timestamp = localStorage.getItem(RATES_TIMESTAMP_KEY);
-	if (timestamp && Date.now() - parseInt(timestamp) < RATES_CACHE_TTL) {
-		const cached = localStorage.getItem(RATES_KEY);
-		if (cached) {
-			engine.apply_rates(cached);
-			updateRateStatus("success", timestamp);
-			return;
-		}
+	ratesService = new RatesService(session);
+	updateRateStatus("loading");
+	try {
+		const result = await ratesService.initialize();
+		updateRateStatus("success", result.timestamp);
+	} catch (error) {
+		console.warn("Failed to initialize exchange rates:", error);
+		updateRateStatus("error");
 	}
-
-	// Fetch fresh rates
-	await fetchRates("auto");
 }
 
 /**
  * Fetch exchange rates from APIs and apply to engine
  */
 async function fetchRates(source = "auto") {
+	if (!ratesService || rateStatus === "loading") return;
 	updateRateStatus("loading");
 
 	try {
-		const [fiat, crypto] = await Promise.all([
-			// Fiat rates from open.er-api.com
-			fetch("https://open.er-api.com/v6/latest/USD")
-				.then((r) => r.json())
-				.then((d) => d.rates || {})
-				.catch(() => ({})),
-
-			// Crypto rates from CoinGecko
-			fetch(
-				`https://api.coingecko.com/api/v3/simple/price?ids=${Object.values(CRYPTO_IDS).join(",")}&vs_currencies=usd`,
-			)
-				.then((r) => r.json())
-				.then((data) => {
-					const rates = {};
-					for (const [code, id] of Object.entries(CRYPTO_IDS)) {
-						if (data[id]?.usd) rates[code] = data[id].usd;
-					}
-					return rates;
-				})
-				.catch(() => ({})),
-		]);
-
-		const rates = { ...fiat, ...crypto };
-
-		if (Object.keys(rates).length > 0) {
-			const json = JSON.stringify(rates);
-			const now = Date.now().toString();
-			engine.apply_rates(json);
-			localStorage.setItem(RATES_KEY, json);
-			localStorage.setItem(RATES_TIMESTAMP_KEY, now);
-			updateRateStatus("success", now);
-			if (source === "manual") {
-				trackEvent("Rates Refreshed");
-			}
-
-			// Re-evaluate to apply new rates
-			evaluate();
-		} else {
-			updateRateStatus("error");
-			if (source === "manual") {
-				trackEvent("Rates Refresh Failed");
-			}
+		const result = await ratesService.refresh();
+		updateRateStatus("success", result.timestamp);
+		if (source === "manual") {
+			trackEvent("Rates Refreshed");
 		}
+		evaluate();
 	} catch (e) {
 		console.warn("Failed to fetch rates:", e);
 		updateRateStatus("error");
@@ -222,8 +163,8 @@ async function init() {
 		await initWasm();
 	} catch (e) {
 		console.error("Failed to initialize WASM:", e);
-		$.editor.textContent =
-			"# Error: Failed to load calculator engine.\n# Please refresh the page.";
+		const detail = e instanceof Error ? e.message : String(e);
+		$.editor.textContent = `# Error: Failed to load calculator engine.\n# ${detail}`;
 		return;
 	}
 
@@ -257,10 +198,6 @@ async function init() {
 	// Setup button event listeners
 	setupEventListeners();
 
-	// Initialize Lucide icons
-	if (window.lucide) {
-		lucide.createIcons();
-	}
 }
 
 // ============================================================================
@@ -273,8 +210,8 @@ async function init() {
 function highlight(editor) {
 	const code = editor.textContent || "";
 
-	if (!code || !tokenizeFn) {
-		setHtml(editor, escapeHtml(code) || "\n");
+	if (!code || !session) {
+		replaceHtml(editor, escapeHtml(code) || "\n");
 		return;
 	}
 
@@ -289,20 +226,14 @@ function highlight(editor) {
 		})
 		.join("");
 
-	setHtml(editor, html || "\n");
+	replaceHtml(editor, html || "\n");
 }
 
 /**
  * Get set of known variable names from engine
  */
 function getKnownVariables() {
-	if (!engine) return null;
-	try {
-		const vars = JSON.parse(engine.get_variables());
-		return new Set(vars.map((v) => v.name));
-	} catch {
-		return null;
-	}
+	return session?.getVariableNames() || "";
 }
 
 // ============================================================================
@@ -328,7 +259,7 @@ function setupEventListeners() {
  * Evaluate document and update all UI elements
  */
 function evaluate() {
-	if (!engine || !jar) return;
+	if (!session || !jar) return;
 
 	const content = jar.toString();
 	const lines = content.split("\n");
@@ -338,16 +269,17 @@ function evaluate() {
 
 	// Evaluate all lines via WASM engine
 	let results = [];
+	let totals = [];
 	try {
-		results = JSON.parse(engine.eval_document(content));
-	} catch (e) {
-		console.error("Evaluation error:", e);
+		({ results, totals } = session.evaluateDocument(content));
+	} catch (error) {
+		console.error("Evaluation error:", error);
 	}
 
 	// Update UI
 	renderLineNumbers(lines.length, results);
 	renderResults(results);
-	renderFooter();
+	renderFooter(totals);
 }
 
 // ============================================================================
@@ -367,14 +299,14 @@ function renderLineNumbers(count, results) {
 			html += `<div class="line">${i}</div>`;
 		}
 	}
-	setHtml($.lineNumbers, html);
+	replaceHtml($.lineNumbers, html);
 }
 
 /**
  * Render results in right gutter (with syntax highlighting)
  */
 function renderResults(results) {
-	setHtml(
+	replaceHtml(
 		$.results,
 		results
 			.map((r) =>
@@ -389,16 +321,11 @@ function renderResults(results) {
 /**
  * Render footer (totals with syntax highlighting)
  */
-function renderFooter() {
-	let totals = [];
-	try {
-		totals = JSON.parse(engine.get_totals());
-	} catch {}
-
-	setHtml(
+function renderFooter(totals) {
+	replaceHtml(
 		$.totals,
 		totals.length > 0
-			? `<span class="total-label">total:</span> ${totals.map(renderTokens).join("&nbsp;&nbsp;")}`
+			? `<span class="total-label">total:</span> ${totals.map((total) => renderTokens(total)).join("&nbsp;&nbsp;")}`
 			: "",
 	);
 }
@@ -422,7 +349,7 @@ function newDocument() {
 		});
 	}
 	jar.updateCode("");
-	engine?.clear();
+	session?.clear();
 	analyticsState.initialSource = "new_document";
 	evaluate();
 	$.editor.focus();
@@ -710,16 +637,8 @@ function trackShareCreated(method, shareUrl, content) {
 
 function trackEvent(name, data = undefined) {
 	const payload = sanitizeAnalyticsData(data);
-	if (sendTrackedEvent(name, payload)) return;
-
-	if (analyticsState.pendingEvents.length >= 32) return;
-	analyticsState.pendingEvents.push({ name, payload });
-	scheduleAnalyticsFlush();
-}
-
-function sendTrackedEvent(name, payload) {
 	const track = window.umami?.track;
-	if (typeof track !== "function") return false;
+	if (typeof track !== "function") return;
 
 	try {
 		if (payload && Object.keys(payload).length > 0) {
@@ -727,44 +646,8 @@ function sendTrackedEvent(name, payload) {
 		} else {
 			track(name);
 		}
-		return true;
 	} catch {
-		return false;
-	}
-}
-
-function scheduleAnalyticsFlush() {
-	if (
-		analyticsState.flushTimer ||
-		analyticsState.flushAttempts >= ANALYTICS_MAX_FLUSH_ATTEMPTS
-	) {
-		return;
-	}
-
-	analyticsState.flushTimer = window.setTimeout(
-		flushAnalyticsQueue,
-		ANALYTICS_FLUSH_DELAY_MS,
-	);
-}
-
-function flushAnalyticsQueue() {
-	analyticsState.flushTimer = null;
-
-	if (!analyticsState.pendingEvents.length) return;
-	if (typeof window.umami?.track !== "function") {
-		analyticsState.flushAttempts += 1;
-		if (analyticsState.flushAttempts >= ANALYTICS_MAX_FLUSH_ATTEMPTS) {
-			analyticsState.pendingEvents = [];
-			return;
-		}
-		scheduleAnalyticsFlush();
-		return;
-	}
-
-	analyticsState.flushAttempts = 0;
-	const pendingEvents = analyticsState.pendingEvents.splice(0);
-	for (const event of pendingEvents) {
-		sendTrackedEvent(event.name, event.payload);
+		// Analytics is best-effort and must never affect calculator behavior.
 	}
 }
 
@@ -828,48 +711,12 @@ function getFileExtension(filename) {
 // Utilities
 // ============================================================================
 
-function setHtml(element, html) {
-	const range = document.createRange();
-	range.selectNodeContents(element);
-	element.replaceChildren(range.createContextualFragment(html));
-}
-
-/**
- * Escape HTML special characters to prevent XSS
- */
-function escapeHtml(text) {
-	if (!text) return "";
-	return text
-		.replace(/&/g, "&amp;")
-		.replace(/</g, "&lt;")
-		.replace(/>/g, "&gt;");
-}
-
 /**
  * Render tokens as syntax-highlighted HTML
  * Enhances tokenization by highlighting known variable references
  */
 function renderTokens(text, knownVars = null) {
-	if (!text || !tokenizeFn) return escapeHtml(text);
-
-	try {
-		const tokens = JSON.parse(tokenizeFn(text));
-		let html = "";
-		for (const t of tokens) {
-			// Promote "text" tokens to "variable" if they match a known variable
-			let type = t.token_type;
-			if (type === "text" && knownVars?.has(t.text)) {
-				type = "variable";
-			}
-			html +=
-				type === "whitespace"
-					? escapeHtml(t.text)
-					: `<span class="token-${type}">${escapeHtml(t.text)}</span>`;
-		}
-		return html || escapeHtml(text);
-	} catch {
-		return escapeHtml(text);
-	}
+	return renderTokenHtml(session, text, knownVars || "", "token-");
 }
 
 /**

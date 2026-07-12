@@ -3,6 +3,7 @@
  */
 
 export interface NumrResult {
+  input: string;
   result: string;
   is_empty: boolean;
   is_error: boolean;

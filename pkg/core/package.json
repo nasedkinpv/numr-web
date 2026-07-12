@@ -2,8 +2,12 @@
   "name": "numr-core",
   "type": "module",
   "description": "Core calculation engine for numr - expression parsing, evaluation, and unit handling",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nasedkinpv/numr"
+  },
   "files": [
     "numr_core_bg.wasm",
     "numr_core.js",
