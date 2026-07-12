@@ -48,6 +48,6 @@ jobs:
         working-directory: numr/numr-web
         run: npm run build
 
-      - name: Verify generated bindings and asset stamps are committed
+      - name: Verify rebuilt WASM contracts
         working-directory: numr/numr-web
-        run: git diff --exit-code
+        run: npm run check
