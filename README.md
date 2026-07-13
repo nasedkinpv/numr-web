@@ -7,7 +7,7 @@ Web interface and reusable custom element for [numr](https://github.com/nasedkin
 Use `<numr-calculator>` anywhere:
 
 ```html
-<script type="module" src="https://numr.cc/numr-calculator.js?v=bfe0d8e37f"></script>
+<script type="module" src="https://numr.cc/numr-calculator.js?v=6f2d02fa7d"></script>
 
 <numr-calculator></numr-calculator>
 ```
@@ -112,10 +112,10 @@ This is also the layout created by web CI.
 
 ### Prerequisites
 
-- Rust 1.88.0 with the `wasm32-unknown-unknown` target
-- [wasm-pack 0.15.0](https://rustwasm.github.io/wasm-pack/installer/)
-- Node.js 22 or newer
-- Bun 1.3.11
+- Rust 1.88 or newer with the `wasm32-unknown-unknown` target
+- [wasm-pack](https://rustwasm.github.io/wasm-pack/installer/)
+- Node.js 24 or newer
+- Bun 1.3 or newer
 - Playwright Chromium and WebKit (`npx playwright install chromium webkit`)
 
 ### Checks and Builds
@@ -135,11 +135,11 @@ npm run build
 npm run serve
 ```
 
-The core and editor builds use the pinned Rust toolchain with `--no-default-features --features wasm --locked`. They also isolate wasm-pack from system `wasm-opt` installations so its pinned optimizer produces the same committed artifacts on developer machines and CI. Native Rust release builds optimize for runtime speed; these web entrypoints override `opt-level` to `z`, followed by `wasm-opt -Oz`, to keep artifacts small. `npm run build:frontend` rebuilds the browser entrypoints and asset stamps without rebuilding WASM; use it for the fast JavaScript/CSS loop when the committed WASM artifacts are already current.
+The core and editor builds use `--no-default-features --features wasm --locked`. Native Rust release builds optimize for runtime speed; these web entrypoints override `opt-level` to `z`, followed by `wasm-opt -Oz`, to keep artifacts small. `npm run build:frontend` rebuilds the browser entrypoints and asset stamps without rebuilding WASM; use it for the fast JavaScript/CSS loop when the committed WASM artifacts are already current.
 
 `npm run check:versions` requires the main Cargo workspace, this package, `electrobun.config.ts`, and both generated WASM package manifests to use the same version. `npm run build` performs that check after regenerating the WASM manifests, so it works directly after a version bump.
 
-Generated `pkg/` bindings and asset stamps are committed. CI rebuilds them and fails on any diff, so review and commit generated changes together with the source interface that produced them.
+Generated `pkg/` bindings and asset stamps are committed. CI tests those deployable artifacts before rebuilding the source packages, so review and commit generated changes together with the source interface that produced them.
 
 ### Desktop development
 

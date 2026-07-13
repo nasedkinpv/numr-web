@@ -25,9 +25,9 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
+    readonly expressionPrefixUtf16Len: (a: number, b: number) => number;
     readonly tokenize: (a: number, b: number, c: number) => void;
     readonly tokenizeWithVariables: (a: number, b: number, c: number, d: number, e: number) => void;
-    readonly expressionPrefixUtf16Len: (a: number, b: number) => number;
     readonly init: () => void;
     readonly __wbindgen_export: (a: number, b: number, c: number) => void;
     readonly __wbindgen_export2: (a: number, b: number) => number;

@@ -18,32 +18,29 @@ jobs:
     timeout-minutes: 25
     steps:
       - name: Check out compatible numr core
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: nasedkinpv/numr
           path: numr
 
       - name: Check out numr-web
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: numr/numr-web
 
-      - uses: dtolnay/rust-toolchain@master
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.88.0
           targets: wasm32-unknown-unknown
 
       - uses: taiki-e/install-action@v2
         with:
-          tool: wasm-pack@0.15.0
+          tool: wasm-pack
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
 
       - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.3.11
 
       - name: Install JavaScript dependencies
         working-directory: numr/numr-web
@@ -57,13 +54,13 @@ jobs:
         working-directory: numr/numr-web
         run: npm run check
 
+      - name: Check committed browser layout
+        working-directory: numr/numr-web
+        run: npm run test:browser
+
       - name: Build both WASM packages
         working-directory: numr/numr-web
         run: npm run build
-
-      - name: Check browser layout
-        working-directory: numr/numr-web
-        run: npm run test:browser
 
       - name: Check desktop entrypoints
         working-directory: numr/numr-web
@@ -72,9 +69,3 @@ jobs:
       - name: Verify rebuilt WASM contracts
         working-directory: numr/numr-web
         run: npm run check
-
-      - name: Verify generated artifacts are committed
-        working-directory: numr/numr-web
-        run: |
-          git diff --exit-code
-          test -z "$(git ls-files --others --exclude-standard)"

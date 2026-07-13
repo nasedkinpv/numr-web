@@ -1,9 +1,9 @@
 /* tslint:disable */
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
+export const expressionPrefixUtf16Len: (a: number, b: number) => number;
 export const tokenize: (a: number, b: number, c: number) => void;
 export const tokenizeWithVariables: (a: number, b: number, c: number, d: number, e: number) => void;
-export const expressionPrefixUtf16Len: (a: number, b: number) => number;
 export const init: () => void;
 export const __wbindgen_export: (a: number, b: number, c: number) => void;
 export const __wbindgen_export2: (a: number, b: number) => number;
