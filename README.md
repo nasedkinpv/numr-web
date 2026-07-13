@@ -7,7 +7,7 @@ Web interface and reusable custom element for [numr](https://github.com/nasedkin
 Use `<numr-calculator>` anywhere:
 
 ```html
-<script type="module" src="https://numr.cc/numr-calculator.js?v=6f2d02fa7d"></script>
+<script type="module" src="https://numr.cc/numr-calculator.js?v=c55506ae0c"></script>
 
 <numr-calculator></numr-calculator>
 ```

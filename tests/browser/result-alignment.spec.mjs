@@ -4,6 +4,16 @@ const EXPRESSION = Array.from({ length: 20 }, (_, index) => index + 1).join(" + 
 const COMMENT =
 	"a deliberately long Unicode comment 🧮 that occupies extra visual rows without moving the result anchor";
 const DOCUMENT = `${EXPRESSION} // ${COMMENT}`;
+const MULTILINE_EXPRESSIONS = [
+	Array.from({ length: 24 }, (_, index) => index + 1).join(" + "),
+	"1000000 USD in EUR + 25 USD + 30 USD + 40 USD + 50 USD",
+	Array.from({ length: 18 }, (_, index) => `${index + 1} km`).join(" + "),
+	"median(10, 30, 20, 50, 70, 90, 110, 130, 150, 170)",
+	"clamp(120 + 30 + 40 + 50 + 60 + 70 + 80 + 90, 0, 1000)",
+];
+const MULTILINE_DOCUMENT = MULTILINE_EXPRESSIONS.map(
+	(expression) => `${expression} // ${COMMENT}`,
+).join("\n");
 
 async function settleLayout(page) {
 	await page.evaluate(async () => {
@@ -61,6 +71,40 @@ async function expectAligned(page) {
 			return Math.abs(Math.round(layout.alignmentDelta / layout.lineHeight));
 		})
 		.toBe(0);
+}
+
+async function readAlignmentDeltas(page) {
+	return page.evaluate(() => {
+		const lines = [...document.querySelectorAll(".cm-content .cm-line")];
+		const markers = [
+			...document.querySelectorAll("[data-numr-result-anchor]"),
+		];
+		if (lines.length !== markers.length) {
+			throw new Error(
+				`Expected one result marker per line, got ${markers.length} for ${lines.length}`,
+			);
+		}
+
+		return lines.map((line, index) => {
+			const prefixLength = line.textContent.indexOf("//") - 1;
+			const walker = document.createTreeWalker(line, NodeFilter.SHOW_TEXT);
+			let remaining = prefixLength - 1;
+			for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+				if (remaining < node.data.length) {
+					const range = document.createRange();
+					range.setStart(node, remaining);
+					range.setEnd(node, remaining + 1);
+					const delta = Math.round(
+						markers[index].getBoundingClientRect().top -
+							range.getBoundingClientRect().top,
+					);
+					return delta === 0 ? 0 : delta;
+				}
+				remaining -= node.data.length;
+			}
+			throw new Error(`Expression prefix is outside editor line ${index + 1}`);
+		});
+	});
 }
 
 test("results follow the executable row across wrap, resize, and gutter toggles", async ({
@@ -124,16 +168,48 @@ test("results follow the executable row across wrap, resize, and gutter toggles"
 	await expect(wrapButton).toHaveAccessibleName("Disable line wrapping");
 	await expectAligned(page);
 
-	await expect(page.locator(".numr-line-numbers")).toHaveCount(1);
+	const lineNumbers = page.locator(".numr-line-numbers");
+	await expect(lineNumbers).toBeVisible();
 	const lineNumbersButton = page.locator("#btn-line-numbers");
 	await expect(lineNumbersButton).toHaveAccessibleName("Hide line numbers");
 	await lineNumbersButton.click();
-	await expect(page.locator(".numr-line-numbers")).toHaveCount(0);
+	await expect(lineNumbers).toBeHidden();
 	await expect(lineNumbersButton).toHaveAccessibleName("Show line numbers");
 	await expectAligned(page);
 	await lineNumbersButton.click();
-	await expect(page.locator(".numr-line-numbers")).toHaveCount(1);
+	await expect(lineNumbers).toBeVisible();
 	await expectAligned(page);
 
 	expect(pageErrors).toEqual([]);
+});
+
+test("line-number toggles keep every wrapped result row aligned", async ({
+	page,
+}) => {
+	await page.route(/^https:\/\//, (route) => route.abort());
+	await page.setViewportSize({ width: 440, height: 640 });
+	await page.addInitScript((content) => {
+		localStorage.clear();
+		localStorage.setItem("numr-document", content);
+		localStorage.setItem("numr-line-wrapping", "true");
+		localStorage.setItem("numr-line-numbers", "true");
+	}, MULTILINE_DOCUMENT);
+
+	await page.goto("/");
+	await expect(page.locator("[data-numr-result-anchor]")).toHaveCount(
+		MULTILINE_EXPRESSIONS.length,
+	);
+	await settleLayout(page);
+	expect(await readAlignmentDeltas(page)).toEqual(
+		MULTILINE_EXPRESSIONS.map(() => 0),
+	);
+
+	const lineNumbersButton = page.locator("#btn-line-numbers");
+	for (let click = 0; click < 3; click += 1) {
+		await lineNumbersButton.click();
+		await settleLayout(page);
+		expect(await readAlignmentDeltas(page)).toEqual(
+			MULTILINE_EXPRESSIONS.map(() => 0),
+		);
+	}
 });

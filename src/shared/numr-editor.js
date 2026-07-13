@@ -115,6 +115,10 @@ function lineNumbersGutter() {
 	});
 }
 
+const hiddenLineNumbersTheme = EditorView.theme({
+	".numr-line-numbers": { display: "none !important" },
+});
+
 function widestResult(evaluation) {
 	let widest = "";
 	for (const result of evaluation.results) {
@@ -417,8 +421,9 @@ export class NumrEditor {
 				this.lineWrapping ? EditorView.lineWrapping : [],
 			),
 			this.lineNumbersCompartment.of(
-				this.showLineNumbers ? lineNumbersGutter() : [],
+				this.showLineNumbers ? [] : hiddenLineNumbersTheme,
 			),
+			lineNumbersGutter(),
 			EditorView.updateListener.of((update) => {
 				if (update.docChanged) {
 					this.onDocumentChange(update.state.doc.toString());
@@ -521,7 +526,7 @@ export class NumrEditor {
 		this.showLineNumbers = next;
 		this.view.dispatch({
 			effects: this.lineNumbersCompartment.reconfigure(
-				next ? lineNumbersGutter() : [],
+				next ? [] : hiddenLineNumbersTheme,
 			),
 		});
 		this.scheduleResultAlignment();
