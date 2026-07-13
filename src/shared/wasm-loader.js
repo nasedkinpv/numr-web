@@ -45,6 +45,7 @@ export async function loadNumrWasm({ basePath = "", version = "" } = {}) {
 			WasmEngine: coreModule.WasmEngine,
 			tokenize: editorModule.tokenize,
 			tokenizeWithVariables: editorModule.tokenizeWithVariables,
+			expressionPrefixUtf16Len: editorModule.expressionPrefixUtf16Len,
 		};
 	})();
 

@@ -8,25 +8,60 @@ body.desktop {
 }
 
 body.desktop .container {
-	max-width: none;
 	overflow: hidden;
-	background: var(--bg-primary);
+	background: var(--numr-bg-primary);
 	border-radius: 12px;
 }
 
 body.desktop header {
 	min-height: 2.4rem;
-	padding-top: 0.55rem;
+	padding-block: 0.4375rem;
 	padding-left: 0.75rem;
 	padding-right: 0.5rem;
-}
-
-body.desktop footer {
-	padding-right: 0.5rem;
-}
-
-body.desktop .logo,
-body.desktop .actions button {
 	-webkit-user-select: none;
 	user-select: none;
+}
+
+body.desktop .actions button,
+body.desktop .footer-actions button {
+	-webkit-user-select: none;
+	user-select: none;
+}
+
+body.desktop .numr-line-numbers {
+	min-width: calc(2ch + 11px + 1rem);
+}
+
+body.desktop .logo img {
+	-webkit-user-drag: none;
+}
+
+body.desktop #btn-hide {
+	margin-left: 0.25rem;
+	border-radius: 50%;
+	transition:
+		color 120ms ease,
+		background-color 120ms ease,
+		transform 120ms ease;
+}
+
+body.desktop #btn-hide svg {
+	width: 12px;
+	height: 12px;
+}
+
+body.desktop #btn-hide:active {
+	transform: scale(0.97);
+}
+
+@media (hover: hover) and (pointer: fine) {
+	body.desktop #btn-hide:hover {
+		color: var(--numr-danger);
+		background: color-mix(in srgb, var(--numr-danger) 12%, transparent);
+	}
+}
+
+/* Electrobun's views:// loader does not resolve cache-busting queries. */
+body.desktop .logo::after {
+	background-image: url("numr-wordmark.svg");
 }

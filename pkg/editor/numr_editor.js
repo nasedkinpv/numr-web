@@ -1,6 +1,18 @@
 /* @ts-self-types="./numr_editor.d.ts" */
 
 /**
+ * Return the UTF-16 offset where the executable expression ends.
+ * @param {string} input
+ * @returns {number}
+ */
+export function expressionPrefixUtf16Len(input) {
+    const ptr0 = passStringToWasm0(input, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.expressionPrefixUtf16Len(ptr0, len0);
+    return ret >>> 0;
+}
+
+/**
  * Initialize panic hook for better error messages in the browser console
  */
 export function init() {

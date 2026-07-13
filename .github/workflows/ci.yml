@@ -46,6 +46,10 @@ jobs:
         working-directory: numr/numr-web
         run: bun install --frozen-lockfile
 
+      - name: Install browser for layout tests
+        working-directory: numr/numr-web
+        run: npx playwright install --with-deps chromium webkit
+
       - name: Check JavaScript contracts
         working-directory: numr/numr-web
         run: npm run check
@@ -54,6 +58,20 @@ jobs:
         working-directory: numr/numr-web
         run: npm run build
 
+      - name: Check browser layout
+        working-directory: numr/numr-web
+        run: npm run test:browser
+
+      - name: Check desktop entrypoints
+        working-directory: numr/numr-web
+        run: npm run desktop:check
+
       - name: Verify rebuilt WASM contracts
         working-directory: numr/numr-web
         run: npm run check
+
+      - name: Verify generated artifacts are committed
+        working-directory: numr/numr-web
+        run: |
+          git diff --exit-code
+          test -z "$(git ls-files --others --exclude-standard)"

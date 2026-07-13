@@ -66,19 +66,23 @@ class LineNumberMarker extends GutterMarker {
 }
 
 class ResultMarker extends GutterMarker {
-	constructor(session, text = "") {
+	constructor(session, text = "", anchor = null) {
 		super();
 		this.session = session;
 		this.text = text;
+		this.anchor = anchor;
 	}
 
 	eq(other) {
-		return this.text === other.text;
+		return this.text === other.text && this.anchor === other.anchor;
 	}
 
 	toDOM() {
 		const marker = document.createElement("span");
 		marker.className = "numr-result";
+		if (this.anchor !== null) {
+			marker.dataset.numrResultAnchor = String(this.anchor);
+		}
 		appendTokenNodes(marker, this.session, this.text);
 		return marker;
 	}
@@ -134,7 +138,11 @@ function resultsGutter(session) {
 			const line = view.state.doc.lineAt(block.from);
 			const result = view.state.field(evaluationField).results[line.number - 1];
 			return result && !result.is_empty && !result.is_error
-				? new ResultMarker(session, result.result)
+				? new ResultMarker(
+						session,
+						result.result,
+						line.from + session.expressionPrefixLength(line.text),
+					)
 				: null;
 		},
 		lineMarkerChange: evaluationChanged,
@@ -147,6 +155,55 @@ function resultsGutter(session) {
 			),
 	});
 }
+
+const resultAlignment = ViewPlugin.fromClass(
+	class {
+			constructor(view) {
+				this.schedule(view);
+			}
+
+			update(update) {
+				if (
+					evaluationChanged(update) ||
+					update.geometryChanged ||
+					update.viewportChanged
+				) {
+					this.schedule(update.view);
+				}
+			}
+
+			docViewUpdate(view) {
+				this.schedule(view);
+			}
+
+			schedule(view) {
+				view.requestMeasure({
+					key: this,
+					read: (measuredView) =>
+						[
+							...measuredView.dom.querySelectorAll(
+								"[data-numr-result-anchor]",
+							),
+						].map((marker) => {
+							const anchor = Number(marker.dataset.numrResultAnchor);
+							const markerRect = marker.getBoundingClientRect();
+							const rowRect = marker.parentElement.getBoundingClientRect();
+							const anchorRect = measuredView.coordsAtPos(anchor, -1);
+							const maxOffset = Math.max(0, rowRect.height - markerRect.height);
+							const offset = anchorRect
+								? Math.min(maxOffset, Math.max(0, anchorRect.top - rowRect.top))
+								: 0;
+							return { marker, offset };
+						}),
+					write: (measurements) => {
+						for (const { marker, offset } of measurements) {
+							marker.style.top = `${offset}px`;
+						}
+					},
+				});
+			}
+	},
+);
 
 function syntaxHighlighting(session) {
 	return ViewPlugin.fromClass(
@@ -223,9 +280,10 @@ const editorTheme = EditorView.theme(
 		".cm-content": {
 			minWidth: "max-content",
 			padding: "0.5rem 0",
-			caretColor: "var(--numr-accent, #a8b4f4)",
+			caretColor: "var(--numr-accent, #eceef4)",
 		},
-		".cm-line": { padding: "0 0.5rem" },
+		".cm-content.cm-lineWrapping": { minWidth: "0" },
+		".cm-line": { padding: "0 0.75rem" },
 		".cm-gutters": {
 			backgroundColor: "var(--numr-bg-primary, #1a1c1e)",
 			color: "var(--numr-text-muted, #6b7280)",
@@ -236,19 +294,25 @@ const editorTheme = EditorView.theme(
 			lineHeight: "var(--numr-line-height, 1.5em)",
 		},
 		".numr-line-numbers": {
-			minWidth: "calc(2ch + 14px + 1rem)",
+			minWidth: "calc(2ch + 7px + 1rem)",
 			borderRight: "1px solid var(--numr-border, #2a2e32)",
 		},
 		".numr-line-numbers .cm-gutterElement": {
-			padding: "0 0.5rem",
+			padding: "0 0.33rem",
 			textAlign: "right",
 		},
 		".numr-results": {
 			borderLeft: "1px solid var(--numr-border, #2a2e32)",
 		},
 		".numr-results .cm-gutterElement": {
-			padding: "0 1rem",
+			position: "relative",
+			padding: "0 0.75rem",
 			textAlign: "right",
+		},
+		".numr-result[data-numr-result-anchor]": {
+			position: "absolute",
+			top: "0",
+			right: "0.75rem",
 		},
 		".numr-line-number": {
 			position: "relative",
@@ -270,14 +334,15 @@ const editorTheme = EditorView.theme(
 			backgroundColor: "var(--numr-error, #f4a8a8)",
 		},
 		".cm-selectionBackground, ::selection": {
-			backgroundColor: "rgba(168, 180, 244, 0.25)",
+			backgroundColor:
+				"var(--numr-selection, rgba(236, 238, 244, 0.22))",
 		},
 		".numr-token-number": { color: "var(--numr-token-number, #b898f4)" },
 		".numr-token-operator, .numr-token-keyword": {
 			color: "var(--numr-token-operator, #f47898)",
 		},
 		".numr-token-variable": { color: "var(--numr-token-variable, #f4a860)" },
-		".numr-token-unit": { color: "var(--numr-token-unit, #a8b4f4)" },
+		".numr-token-unit": { color: "var(--numr-token-unit, #f4e878)" },
 		".numr-token-currency, .numr-token-function": {
 			color: "var(--numr-token-currency, #f4c244)",
 		},
@@ -285,7 +350,7 @@ const editorTheme = EditorView.theme(
 			color: "var(--numr-token-comment, #7d7868)",
 			fontStyle: "italic",
 		},
-		".numr-token-text": { color: "var(--numr-token-text, #f4e878)" },
+		".numr-token-text": { color: "var(--numr-token-text, #eceef4)" },
 		".numr-token-punctuation": {
 			color: "var(--numr-token-punctuation, #a8a498)",
 		},
@@ -299,23 +364,38 @@ export class NumrEditor {
 		session,
 		content = "",
 		readOnly = false,
+		lineWrapping = true,
+		showLineNumbers = true,
 		ariaLabel = "numr document",
+		onDocumentChange = () => {},
 		onChange = () => {},
 		onError = (error) => console.error("Evaluation error", error),
 	}) {
 		this.session = session;
+		this.onDocumentChange = onDocumentChange;
 		this.onChange = onChange;
 		this.onError = onError;
 		this.readOnly = Boolean(readOnly);
+		this.lineWrapping = Boolean(lineWrapping);
+		this.showLineNumbers = Boolean(showLineNumbers);
 		this.ariaLabel = ariaLabel;
 		this.pendingFrame = null;
 		this.destroyed = false;
 		this.readOnlyCompartment = new Compartment();
-		this.extensions = this.createExtensions();
+		this.lineWrappingCompartment = new Compartment();
+		this.lineNumbersCompartment = new Compartment();
 		this.view = new EditorView({
-			state: EditorState.create({ doc: content, extensions: this.extensions }),
+			state: EditorState.create({
+				doc: content,
+				extensions: this.createExtensions(),
+			}),
 			parent,
 		});
+		this.handleGeometryChange = () => this.scheduleResultAlignment();
+		this.resizeObserver = new ResizeObserver(this.handleGeometryChange);
+		this.resizeObserver.observe(this.view.dom);
+		document.fonts?.addEventListener("loadingdone", this.handleGeometryChange);
+		document.fonts?.ready.then(this.handleGeometryChange);
 		this.evaluateNow();
 	}
 
@@ -333,12 +413,21 @@ export class NumrEditor {
 				EditorView.editable.of(!this.readOnly),
 				EditorView.contentAttributes.of(this.contentAttributes()),
 			]),
+			this.lineWrappingCompartment.of(
+				this.lineWrapping ? EditorView.lineWrapping : [],
+			),
+			this.lineNumbersCompartment.of(
+				this.showLineNumbers ? lineNumbersGutter() : [],
+			),
 			EditorView.updateListener.of((update) => {
-				if (update.docChanged) this.scheduleEvaluation();
+				if (update.docChanged) {
+					this.onDocumentChange(update.state.doc.toString());
+					this.scheduleEvaluation();
+				}
 			}),
 			gutters({ fixed: true }),
-			lineNumbersGutter(),
 			resultsGutter(this.session),
+			resultAlignment,
 			syntaxHighlighting(this.session),
 			editorTheme,
 		];
@@ -388,12 +477,16 @@ export class NumrEditor {
 	}
 
 	setContent(content) {
+		const previous = this.getContent();
+		const next =
+			typeof content === "string" ? content : String(content ?? "");
 		this.view.setState(
 			EditorState.create({
-				doc: typeof content === "string" ? content : String(content ?? ""),
-				extensions: this.extensions,
+				doc: next,
+				extensions: this.createExtensions(),
 			}),
 		);
+		if (next !== previous) this.onDocumentChange(next);
 		this.evaluateNow();
 	}
 
@@ -410,12 +503,46 @@ export class NumrEditor {
 		});
 	}
 
+	setLineWrapping(lineWrapping) {
+		const next = Boolean(lineWrapping);
+		if (next === this.lineWrapping) return;
+		this.lineWrapping = next;
+		this.view.dispatch({
+			effects: this.lineWrappingCompartment.reconfigure(
+				next ? EditorView.lineWrapping : [],
+			),
+		});
+		this.scheduleResultAlignment();
+	}
+
+	setLineNumbers(showLineNumbers) {
+		const next = Boolean(showLineNumbers);
+		if (next === this.showLineNumbers) return;
+		this.showLineNumbers = next;
+		this.view.dispatch({
+			effects: this.lineNumbersCompartment.reconfigure(
+				next ? lineNumbersGutter() : [],
+			),
+		});
+		this.scheduleResultAlignment();
+	}
+
+	scheduleResultAlignment() {
+		if (this.destroyed) return;
+		this.view.plugin(resultAlignment)?.schedule(this.view);
+	}
+
 	focus() {
 		this.view.focus();
 	}
 
 	destroy() {
 		this.destroyed = true;
+		this.resizeObserver.disconnect();
+		document.fonts?.removeEventListener(
+			"loadingdone",
+			this.handleGeometryChange,
+		);
 		if (this.pendingFrame !== null) cancelAnimationFrame(this.pendingFrame);
 		this.pendingFrame = null;
 		this.view.destroy();

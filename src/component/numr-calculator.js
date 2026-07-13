@@ -8,10 +8,10 @@
 import { NumrEditor } from "../shared/numr-editor.js";
 import { NumrSession } from "../shared/numr-session.js";
 import { RatesService } from "../shared/rates-service.js";
+import { safeStorage, STORAGE_KEYS } from "../shared/storage.js";
 import { renderTokenTotals } from "../shared/token-view.js";
 
 const VERSION = __NUMR_ASSET_VERSION__;
-const STORAGE_KEY = "numr-document";
 const DEFAULT_CONTENT = `# Quick calculations
 100 + 50
 * 2                        // continuation from previous
@@ -42,8 +42,8 @@ const COMPONENT_STYLES = `
     min-width: 0;
     min-height: 0;
     overflow: hidden;
-    background: var(--numr-bg-primary);
-    color: var(--numr-text-primary);
+    background: var(--numr-bg-primary, #1a1c1e);
+    color: var(--numr-text-primary, #e8eaed);
     font-family: var(--numr-font-mono, var(--numr-font, ui-monospace, 'SF Mono', SFMono-Regular, 'Cascadia Code', Consolas, monospace));
     font-size: var(--numr-font-size, 14px);
     line-height: var(--numr-line-height, 1.5em);
@@ -55,17 +55,18 @@ const COMPONENT_STYLES = `
     min-height: 2rem;
     padding: 0.25rem 0.5rem;
     flex: none;
-    background: var(--numr-bg-secondary);
+    background: var(--numr-bg-secondary, #1f2225);
   }
 
   header {
     justify-content: space-between;
-    border-bottom: 1px solid var(--numr-border);
+    border-bottom: 1px solid var(--numr-border, #2a2e32);
   }
 
   footer {
     justify-content: flex-start;
-    border-top: 1px solid var(--numr-border);
+    padding: 0.25rem 0.75rem 0.4rem 0.5rem;
+    border-top: 1px solid var(--numr-border, #2a2e32);
     overflow-x: auto;
     white-space: pre;
   }
@@ -79,7 +80,7 @@ const COMPONENT_STYLES = `
   }
 
   .minimal header, .minimal footer { display: none; }
-  .logo { color: var(--numr-text-muted); font-weight: 600; }
+  .logo { color: var(--numr-text-muted, #6b7280); font-weight: 600; }
 
   button {
     display: grid;
@@ -87,15 +88,17 @@ const COMPONENT_STYLES = `
     padding: 0.25rem;
     border: 0;
     background: transparent;
-    color: var(--numr-text-muted);
+    color: var(--numr-text-muted, #6b7280);
     cursor: pointer;
   }
 
-  button:hover { color: var(--numr-accent); }
+  @media (hover: hover) and (pointer: fine) {
+    button:hover { color: var(--numr-accent, #eceef4); }
+  }
   button.loading { cursor: wait; opacity: 0.7; }
   button.loading svg { animation: spin 1s linear infinite; }
-  button.success { color: var(--numr-success); }
-  button.error { color: var(--numr-error); }
+  button.success { color: var(--numr-success, #7dd3a8); }
+  button.error { color: var(--numr-error, #f4a8a8); }
 
   @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -110,18 +113,18 @@ const COMPONENT_STYLES = `
     display: grid;
     place-items: center;
     height: 100%;
-    color: var(--numr-text-muted);
+    color: var(--numr-text-muted, #6b7280);
   }
 
-  .total-label { color: var(--numr-text-muted); }
-  .numr-token-number { color: #b898f4; }
-  .numr-token-operator, .numr-token-keyword { color: #f47898; }
-  .numr-token-variable { color: #f4a860; }
-  .numr-token-unit { color: #a8b4f4; }
-  .numr-token-currency, .numr-token-function { color: #f4c244; }
-  .numr-token-comment { color: #7d7868; font-style: italic; }
-  .numr-token-text { color: #f4e878; }
-  .numr-token-punctuation { color: #a8a498; }
+  .total-label { color: var(--numr-text-muted, #6b7280); }
+  .numr-token-number { color: var(--numr-token-number, #b898f4); }
+  .numr-token-operator, .numr-token-keyword { color: var(--numr-token-operator, #f47898); }
+  .numr-token-variable { color: var(--numr-token-variable, #f4a860); }
+  .numr-token-unit { color: var(--numr-token-unit, #f4e878); }
+  .numr-token-currency, .numr-token-function { color: var(--numr-token-currency, #f4c244); }
+  .numr-token-comment { color: var(--numr-token-comment, #7d7868); font-style: italic; }
+  .numr-token-text { color: var(--numr-token-text, #eceef4); }
+  .numr-token-punctuation { color: var(--numr-token-punctuation, #a8a498); }
 `;
 
 function booleanProperty(attribute) {
@@ -140,6 +143,7 @@ export class NumrCalculator extends HTMLElement {
 		"content",
 		"minimal",
 		"readonly",
+		"wrap",
 		"norates",
 		"autosave",
 		"storage-key",
@@ -167,11 +171,11 @@ export class NumrCalculator extends HTMLElement {
 	}
 
 	get storageKey() {
-		return this.getAttribute("storage-key") || STORAGE_KEY;
+		return this.getAttribute("storage-key") || STORAGE_KEYS.document;
 	}
 
 	set storageKey(value) {
-		this.setAttribute("storage-key", String(value || STORAGE_KEY));
+		this.setAttribute("storage-key", String(value || STORAGE_KEYS.document));
 	}
 
 	get basePath() {
@@ -188,8 +192,10 @@ export class NumrCalculator extends HTMLElement {
 	}
 
 	disconnectedCallback() {
+		const content = this._editor?.getContent();
 		this._generation += 1;
 		this._disposeRuntime();
+		if (content !== undefined) this.content = content;
 	}
 
 	attributeChangedCallback(name, oldValue, newValue) {
@@ -199,11 +205,13 @@ export class NumrCalculator extends HTMLElement {
 			this._editor.setContent(newValue || "");
 		} else if (name === "readonly") {
 			this._editor?.setReadOnly(this.readonly);
+		} else if (name === "wrap") {
+			this._editor?.setLineWrapping(this.wrap);
 		} else if (name === "minimal") {
 			this.shadowRoot
 				?.querySelector(".container")
 				?.classList.toggle("minimal", this.minimal);
-		} else if (name === "base-path" && this.isConnected && this._ready) {
+		} else if (name === "base-path" && this.isConnected) {
 			this._restart();
 		} else if (name === "norates" && this._ready && !this.norates) {
 			this._initializeRates();
@@ -214,14 +222,14 @@ export class NumrCalculator extends HTMLElement {
 	}
 
 	async _restart() {
-		const content = this.getContent();
+		if (this._editor) this.content = this._editor.getContent();
 		const generation = ++this._generation;
 		this._disposeRuntime();
 		this._renderLoading();
-		await this._initialize(generation, content);
+		await this._initialize(generation);
 	}
 
-	async _initialize(generation, restoredContent = null) {
+	async _initialize(generation) {
 		try {
 			const session = await NumrSession.create({
 				basePath: this.basePath,
@@ -237,16 +245,18 @@ export class NumrCalculator extends HTMLElement {
 			this._renderReady();
 
 			const saved = this.autosave
-				? localStorage.getItem(this.storageKey)
+				? safeStorage.getItem(this.storageKey)
 				: null;
 			const initialContent =
-				restoredContent ?? this.getAttribute("content") ?? saved ?? DEFAULT_CONTENT;
+				this.getAttribute("content") ?? saved ?? DEFAULT_CONTENT;
 			this._editor = new NumrEditor({
 				parent: this.shadowRoot.querySelector(".editor"),
 				session,
 				content: initialContent,
 				readOnly: this.readonly,
+				lineWrapping: this.wrap,
 				ariaLabel: "numr calculator document",
+				onDocumentChange: (content) => this._handleDocumentChange(content),
 				onChange: (evaluation) => this._handleEvaluation(evaluation),
 				onError: (error) =>
 					console.error("numr-calculator: Evaluation error", error),
@@ -288,15 +298,17 @@ export class NumrCalculator extends HTMLElement {
 		}
 	}
 
-	_handleEvaluation({ content, results, totals }) {
+	_handleDocumentChange(content) {
 		if (this.autosave) {
 			if (this._saveTimer) clearTimeout(this._saveTimer);
 			this._saveTimer = setTimeout(() => {
-				localStorage.setItem(this.storageKey, content);
+				safeStorage.setItem(this.storageKey, content);
 				this._saveTimer = null;
 			}, 300);
 		}
+	}
 
+	_handleEvaluation({ content, results, totals }) {
 		renderTokenTotals(
 			this.shadowRoot.querySelector("footer"),
 			this._session,
@@ -352,7 +364,7 @@ export class NumrCalculator extends HTMLElement {
 		if (this._saveTimer) {
 			clearTimeout(this._saveTimer);
 			if (this.autosave && this._editor) {
-				localStorage.setItem(this.storageKey, this._editor.getContent());
+				safeStorage.setItem(this.storageKey, this._editor.getContent());
 			}
 		}
 		this._saveTimer = null;
@@ -367,16 +379,15 @@ export class NumrCalculator extends HTMLElement {
 	}
 
 	getContent() {
-		return this._editor?.getContent() || "";
+		return this._editor?.getContent() ?? this.getAttribute("content") ?? "";
 	}
 
 	setContent(content) {
-		this._editor?.setContent(content);
+		this.content = content;
 	}
 
 	clear() {
-		this._session?.clear();
-		this._editor?.setContent("");
+		this.setContent("");
 	}
 
 	refreshRates() {
@@ -391,6 +402,7 @@ export class NumrCalculator extends HTMLElement {
 Object.defineProperties(NumrCalculator.prototype, {
 	minimal: booleanProperty("minimal"),
 	readonly: booleanProperty("readonly"),
+	wrap: booleanProperty("wrap"),
 	norates: booleanProperty("norates"),
 	autosave: booleanProperty("autosave"),
 });

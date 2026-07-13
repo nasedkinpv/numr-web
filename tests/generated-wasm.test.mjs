@@ -3,6 +3,9 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import init, { WasmEngine } from "../pkg/core/numr_core.js";
+import initEditor, {
+	expressionPrefixUtf16Len,
+} from "../pkg/editor/numr_editor.js";
 
 let initialized;
 function initializeCore() {
@@ -11,6 +14,25 @@ function initializeCore() {
 	).then((module_or_path) => init({ module_or_path }));
 	return initialized;
 }
+
+let editorInitialized;
+function initializeEditor() {
+	editorInitialized ??= readFile(
+		new URL("../pkg/editor/numr_editor_bg.wasm", import.meta.url),
+	).then((module_or_path) => initEditor({ module_or_path }));
+	return editorInitialized;
+}
+
+test("generated editor WASM anchors results before trailing comments", async () => {
+	await initializeEditor();
+	for (const [input, prefix] of [
+		["100 + 50 // note", "100 + 50"],
+		["90° to rad   # angle", "90° to rad"],
+		["🧮 + 1 // unicode", "🧮 + 1"],
+	]) {
+		assert.equal(expressionPrefixUtf16Len(input), prefix.length);
+	}
+});
 
 test("generated WASM exposes the currency catalog and validated rate contract", async () => {
 	await initializeCore();

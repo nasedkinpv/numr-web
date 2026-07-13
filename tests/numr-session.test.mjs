@@ -3,35 +3,24 @@ import test from "node:test";
 
 import { NumrSession } from "../src/shared/numr-session.js";
 
-function createSession(overrides = {}) {
+function createSession(overrides = {}, editorOverrides = {}) {
 	const engine = {
-		eval_document: () => '[{"input":"1+1","result":"2"}]',
 		eval_document_full: () =>
 			'{"results":[{"input":"1+1","result":"2"}],"totals":["2"],"variable_names":"x"}',
-		get_totals: () => '["2"]',
-		get_variable_names: () => "x",
+		get_currency_catalog: () => "[]",
 		apply_rates: () => {},
-		clear: () => {},
 		...overrides,
 	};
 	return new NumrSession({
 		engine,
 		tokenize: (text) => JSON.stringify([{ text, token_type: "text" }]),
 		tokenizeWithVariables: null,
+		...editorOverrides,
 	});
 }
 
 test("normalizes document evaluation and totals", () => {
 	const session = createSession();
-	assert.deepEqual(session.evaluateDocument("1+1"), {
-		results: [{ input: "1+1", result: "2" }],
-		totals: ["2"],
-	});
-	assert.equal(session.getVariableNames(), "x");
-});
-
-test("keeps compatibility with the legacy split document boundary", () => {
-	const session = createSession({ eval_document_full: null });
 	assert.deepEqual(session.evaluateDocument("1+1"), {
 		results: [{ input: "1+1", result: "2" }],
 		totals: ["2"],
@@ -70,6 +59,16 @@ test("tokenization rejects non-string variable metadata at the WASM boundary", (
 	assert.equal(session.tokenizeLine("$3.00", 1)[0].text, "$3.00");
 	assert.equal(plainCalls, 1);
 	assert.equal(variableCalls, 0);
+});
+
+test("uses the shared UTF-16 expression anchor", () => {
+	const session = createSession(
+		{},
+		{
+			expressionPrefixUtf16Len: (text) => text.indexOf("//") - 1,
+		},
+	);
+	assert.equal(session.expressionPrefixLength("🧮 + 1 // note"), "🧮 + 1".length);
 });
 
 test("derives rate-provider currencies from the core catalog", () => {

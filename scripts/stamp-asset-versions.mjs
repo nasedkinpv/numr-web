@@ -50,7 +50,7 @@ function replaceRequired(content, pattern, replacement, label) {
 }
 
 const assetVersions = {
-	logo: hashFile("NUMR.svg"),
+	wordmark: hashFile("numr-wordmark.svg"),
 	faviconIco: hashFile("favicon.ico"),
 	faviconSvg: hashFile("favicon.svg"),
 	faviconPng: hashFile("favicon.png"),
@@ -75,9 +75,9 @@ const calculatorVersion = hashFile("numr-calculator.js");
 let styleCss = readText("style.css");
 styleCss = replaceRequired(
 	styleCss,
-	/url\('NUMR\.svg(?:\?v=[^']+)?'\)/g,
-	"url('NUMR.svg')",
-	"style.css NUMR.svg references",
+	/url\('numr-wordmark\.svg(?:\?v=[^']+)?'\)/g,
+	`url('numr-wordmark.svg?v=${assetVersions.wordmark}')`,
+	"style.css numr-wordmark.svg references",
 );
 const styleVersion = shortHash([Buffer.from(styleCss)]);
 writeText("style.css", styleCss);
@@ -127,9 +127,9 @@ indexHtml = replaceRequired(
 );
 indexHtml = replaceRequired(
 	indexHtml,
-	/src="NUMR\.svg(?:\?v=[^"]+)?"/,
-	`src="NUMR.svg?v=${assetVersions.logo}"`,
-	"index.html logo image",
+	/src="numr-wordmark\.svg(?:\?v=[^"]+)?"/,
+	`src="numr-wordmark.svg?v=${assetVersions.wordmark}"`,
+	"index.html wordmark image",
 );
 indexHtml = replaceRequired(
 	indexHtml,

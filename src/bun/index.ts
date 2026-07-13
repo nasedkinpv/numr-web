@@ -7,7 +7,7 @@ import Electrobun, {
 } from "electrobun/bun";
 import { fileURLToPath } from "node:url";
 
-type OpenDocumentPayload = { content: string; path: string };
+type OpenDocumentPayload = { content: string };
 
 let webviewReady = false;
 const pendingDocuments: OpenDocumentPayload[] = [];
@@ -28,6 +28,9 @@ const rpc = BrowserView.defineRPC({
 	handlers: {
 		requests: {},
 		messages: {
+			copyText: ({ text }: { text: string }) => {
+				Utils.clipboardWriteText(text);
+			},
 			webviewReady: () => {
 				webviewReady = true;
 				let document = pendingDocuments.shift();
@@ -79,12 +82,19 @@ ApplicationMenu.setApplicationMenu([
 	{
 		label: "View",
 		submenu: [
+			{
+				label: "Wrap Lines",
+				action: "toggle-line-wrapping",
+				accelerator: "Alt+z",
+			},
+			{ type: "separator" },
 			{ label: "Refresh Rates", action: "refresh-rates", accelerator: "r" },
 		],
 	},
 ]);
 
 const isMacOS = process.platform === "darwin";
+const isWindows = process.platform === "win32";
 
 if (isMacOS) {
 	Utils.setDockIconVisible(false);
@@ -101,13 +111,14 @@ const win = new BrowserWindow({
 
 let windowVisible = true;
 
-// TODO(desktop): Replace the temporary SF Symbols raster with a shared SVG tray icon.
 const tray = new Tray({
 	image: isMacOS
-		? "views://assets/numr-tray-sf-template.png"
-		: "views://mainview/favicon.png",
+		? "views://assets/numr-tray-template.png"
+		: isWindows
+			? "views://assets/numr-tray.ico"
+			: "views://assets/numr-tray.png",
 	template: isMacOS,
-	width: 18,
+	width: isMacOS ? 14 : 18,
 	height: 18,
 });
 
@@ -158,7 +169,7 @@ updateTrayMenu();
 async function openPath(path: string) {
 	const content = await Bun.file(path).text();
 	setWindowVisible(true);
-	sendOpenDocument({ content, path });
+	sendOpenDocument({ content });
 }
 
 async function openFileUrl(fileUrl: string) {
@@ -194,6 +205,7 @@ Electrobun.events.on("application-menu-clicked", (event) => {
 		case "save-document":
 		case "publish-document":
 		case "refresh-rates":
+		case "toggle-line-wrapping":
 			sendWebviewAction(event.data.action);
 			break;
 		case "hide-window":

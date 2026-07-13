@@ -3,16 +3,8 @@
 export const memory: WebAssembly.Memory;
 export const __wbg_wasmengine_free: (a: number, b: number) => void;
 export const wasmengine_apply_rates: (a: number, b: number, c: number, d: number) => void;
-export const wasmengine_clear: (a: number) => void;
-export const wasmengine_eval: (a: number, b: number, c: number, d: number) => void;
-export const wasmengine_eval_document: (a: number, b: number, c: number, d: number) => void;
 export const wasmengine_eval_document_full: (a: number, b: number, c: number, d: number) => void;
-export const wasmengine_eval_preview: (a: number, b: number, c: number, d: number) => void;
 export const wasmengine_get_currency_catalog: (a: number, b: number) => void;
-export const wasmengine_get_lines: (a: number, b: number) => void;
-export const wasmengine_get_totals: (a: number, b: number) => void;
-export const wasmengine_get_variable_names: (a: number, b: number) => void;
-export const wasmengine_get_variables: (a: number, b: number) => void;
 export const wasmengine_new: () => number;
 export const init: () => void;
 export const __wbindgen_export: (a: number, b: number, c: number) => void;

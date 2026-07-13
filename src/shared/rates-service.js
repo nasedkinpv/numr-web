@@ -1,37 +1,17 @@
+import { createSafeStorage, STORAGE_KEYS } from "./storage.js";
+
 export const DEFAULT_FIAT_RATES_URL =
 	"https://open.er-api.com/v6/latest/USD";
 export const DEFAULT_CRYPTO_RATES_URL =
 	"https://api.coingecko.com/api/v3/simple/price";
 
 const DEFAULT_CACHE_TTL_MS = 60 * 60 * 1000;
-const DEFAULT_RATES_KEY = "numr-rates";
-const DEFAULT_TIMESTAMP_KEY = "numr-rates-timestamp";
-
-// Compatibility fallback for older WASM packages. In 0.7 the registry is
-// exported by numr-core and takes precedence over this list.
-export const FALLBACK_CRYPTO_CURRENCIES = [
-	["BTC", "bitcoin"],
-	["ETH", "ethereum"],
-	["SOL", "solana"],
-	["USDT", "tether"],
-	["USDC", "usd-coin"],
-	["BNB", "binancecoin"],
-	["XRP", "ripple"],
-	["ADA", "cardano"],
-	["DOGE", "dogecoin"],
-	["DOT", "polkadot"],
-	["LTC", "litecoin"],
-	["LINK", "chainlink"],
-	["AVAX", "avalanche-2"],
-	["MATIC", "polygon-ecosystem-token"],
-	["TON", "the-open-network"],
-];
 
 export class RatesService {
 	constructor(
 		session,
 		{
-			storage = globalThis.localStorage,
+			storage,
 			fetchImpl = globalThis.fetch?.bind(globalThis),
 			now = () => Date.now(),
 			cacheTtlMs = DEFAULT_CACHE_TTL_MS,
@@ -41,7 +21,7 @@ export class RatesService {
 		} = {},
 	) {
 		this.session = session;
-		this.storage = storage;
+		this.storage = createSafeStorage(storage);
 		this.fetchImpl = fetchImpl;
 		this.now = now;
 		this.cacheTtlMs = cacheTtlMs;
@@ -54,8 +34,7 @@ export class RatesService {
 	}
 
 	loadCached() {
-		if (!this.storage) return null;
-		const rawTimestamp = this.storage.getItem(DEFAULT_TIMESTAMP_KEY);
+		const rawTimestamp = this.storage.getItem(STORAGE_KEYS.ratesTimestamp);
 		if (!rawTimestamp) return null;
 		const timestamp = Number(rawTimestamp);
 		const age = this.now() - timestamp;
@@ -64,7 +43,9 @@ export class RatesService {
 		}
 
 		try {
-			const rates = JSON.parse(this.storage.getItem(DEFAULT_RATES_KEY) || "null");
+			const rates = JSON.parse(
+				this.storage.getItem(STORAGE_KEYS.rates) || "null",
+			);
 			if (!rates || typeof rates !== "object" || !Object.keys(rates).length) {
 				return null;
 			}
@@ -127,11 +108,9 @@ export class RatesService {
 	}
 
 	#cryptoCurrencies() {
-		const fromCore = this.session.getCryptoCurrencies?.() || [];
-		if (fromCore.length) {
-			return fromCore.map(({ code, coingecko_id: id }) => [code, id]);
-		}
-		return FALLBACK_CRYPTO_CURRENCIES;
+		return this.session
+			.getCryptoCurrencies()
+			.map(({ code, coingecko_id: id }) => [code, id]);
 	}
 
 	async #fetchFiat() {
@@ -175,12 +154,7 @@ export class RatesService {
 	}
 
 	#store(rates, timestamp) {
-		if (!this.storage) return;
-		try {
-			this.storage.setItem(DEFAULT_RATES_KEY, JSON.stringify(rates));
-			this.storage.setItem(DEFAULT_TIMESTAMP_KEY, String(timestamp));
-		} catch {
-			// Cache persistence is best-effort; fresh rates are already applied.
-		}
+		this.storage.setItem(STORAGE_KEYS.rates, JSON.stringify(rates));
+		this.storage.setItem(STORAGE_KEYS.ratesTimestamp, timestamp);
 	}
 }

@@ -3,11 +3,8 @@ import { Electroview } from "electrobun/view";
 declare global {
 	interface Window {
 		numrActions?: Record<string, () => void>;
-		numrOpenDocument?: (
-			content: string,
-			source?: string,
-			filename?: string,
-		) => boolean;
+		numrCopyText?: (text: string) => Promise<boolean>;
+		numrOpenDocument?: (content: string) => boolean;
 	}
 
 	interface WindowEventMap {
@@ -20,14 +17,8 @@ const electroview = new Electroview({
 		handlers: {
 			requests: {},
 			messages: {
-				openDocument: ({
-					content,
-					path,
-				}: {
-					content: string;
-					path: string;
-				}) => {
-					window.numrOpenDocument?.(content, "file_association", path);
+				openDocument: ({ content }: { content: string }) => {
+					window.numrOpenDocument?.(content);
 				},
 				menuAction: ({ action }: { action: string }) => {
 					switch (action) {
@@ -43,6 +34,9 @@ const electroview = new Electroview({
 						case "refresh-rates":
 							window.numrActions?.refreshRates?.();
 							break;
+						case "toggle-line-wrapping":
+							window.numrActions?.toggleLineWrapping?.();
+							break;
 						default:
 							break;
 					}
@@ -51,6 +45,11 @@ const electroview = new Electroview({
 		},
 	}),
 });
+
+window.numrCopyText = async (text) => {
+	electroview.rpc.send.copyText({ text });
+	return true;
+};
 
 window.addEventListener("numr-publish", (event) => {
 	electroview.rpc.send.openExternal({ url: event.detail.url });

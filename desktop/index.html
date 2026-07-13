@@ -4,31 +4,72 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>numr</title>
-    <meta name="theme-color" content="#1a1a2e" />
-    <link rel="icon" type="image/x-icon" href="favicon.ico" sizes="any" />
-    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <meta name="theme-color" content="#1a1c1e" />
+    <link rel="icon" type="image/x-icon" href="favicon.ico" sizes="16x16 32x32 48x48" />
     <link rel="icon" type="image/png" sizes="32x32" href="favicon.png" />
-    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <link rel="icon" type="image/svg+xml" sizes="any" href="favicon.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
     <link rel="stylesheet" href="style.css" />
     <link rel="stylesheet" href="desktop.css" />
   </head>
   <body class="desktop">
     <div class="container">
       <header class="electrobun-webkit-app-region-drag">
-        <a href="./index.html" class="logo electrobun-webkit-app-region-no-drag"
-          ><img src="NUMR.svg" alt="NUMR"
-        /></a>
+        <div class="logo">
+          <img src="numr-wordmark.svg" alt="numr" draggable="false" />
+        </div>
         <div class="actions electrobun-webkit-app-region-no-drag">
-          <button id="btn-hide" title="Hide numr" aria-label="Hide numr">−</button>
-          <button id="btn-rates" title="Refresh exchange rates">↻</button>
-          <button id="btn-new" title="New document">+</button>
-          <button id="btn-save" title="Download file">↓</button>
+          <button id="btn-share" title="Share document link" aria-label="Share document link">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="18" cy="5" r="3" />
+              <circle cx="6" cy="12" r="3" />
+              <circle cx="18" cy="19" r="3" />
+              <path d="m8.59 13.51 6.83 3.98M15.41 6.51 8.59 10.49" />
+            </svg>
+          </button>
+          <button id="btn-new" title="New document" aria-label="New document">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+              <polyline points="14 2 14 8 20 8" />
+              <path d="M12 18v-6M9 15h6" />
+            </svg>
+          </button>
+          <button id="btn-save" title="Download file" aria-label="Download file">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" x2="12" y1="15" y2="3" />
+            </svg>
+          </button>
+          <button id="btn-hide" title="Hide numr" aria-label="Hide numr">
+            <svg aria-hidden="true" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+              <path d="M3 3l6 6M9 3 3 9" />
+            </svg>
+          </button>
         </div>
       </header>
 
       <main class="editor" id="editor"></main>
 
       <footer>
+        <div class="footer-actions">
+          <button id="btn-line-numbers" class="active" title="Hide line numbers" aria-label="Hide line numbers" aria-pressed="true"><span aria-hidden="true">#</span></button>
+          <button id="btn-wrap" class="active" title="Disable line wrapping" aria-label="Disable line wrapping" aria-pressed="true">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 6h13a4 4 0 0 1 0 8H9" />
+              <path d="m12 11-3 3 3 3" />
+              <path d="M3 18h6" />
+            </svg>
+          </button>
+          <button id="btn-rates" title="Refresh exchange rates" aria-label="Refresh exchange rates">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12a9 9 0 0 1-15.74 6.74L3 16" />
+              <path d="M3 21v-5h5" />
+              <path d="M3 12A9 9 0 0 1 18.74 5.26L21 8" />
+              <path d="M16 8h5V3" />
+            </svg>
+          </button>
+        </div>
         <div id="totals"></div>
       </footer>
     </div>

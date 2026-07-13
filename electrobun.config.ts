@@ -23,13 +23,14 @@ export default {
 			},
 		},
 		copy: {
-			"desktop/numr-tray-sf-template.png":
-				"views/assets/numr-tray-sf-template.png",
+			"desktop/numr-tray-template.png": "views/assets/numr-tray-template.png",
+			"desktop/numr-tray.png": "views/assets/numr-tray.png",
+			"desktop/numr-tray.ico": "views/assets/numr-tray.ico",
 			"desktop/index.html": "views/mainview/index.html",
 			"desktop/desktop.css": "views/mainview/desktop.css",
 			"app.js": "views/mainview/app.js",
 			"style.css": "views/mainview/style.css",
-			"NUMR.svg": "views/mainview/NUMR.svg",
+			"numr-wordmark.svg": "views/mainview/numr-wordmark.svg",
 			"favicon.ico": "views/mainview/favicon.ico",
 			"favicon.svg": "views/mainview/favicon.svg",
 			"favicon.png": "views/mainview/favicon.png",
@@ -43,14 +44,17 @@ export default {
 		mac: {
 			bundleCEF: false,
 			defaultRenderer: "native",
+			icons: "desktop/numr.icon",
 		},
 		win: {
 			bundleCEF: false,
 			defaultRenderer: "native",
+			icon: "desktop/numr-app.ico",
 		},
 		linux: {
 			bundleCEF: true,
 			defaultRenderer: "cef",
+			icon: "desktop/numr-app-icon.png",
 		},
 	},
 } satisfies ElectrobunConfig;

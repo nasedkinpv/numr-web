@@ -18,13 +18,13 @@ import {
 	encodeContentForHash,
 	parseShareHash,
 } from "../shared/share-codec.js";
+import { safeStorage, STORAGE_KEYS } from "../shared/storage.js";
 import { renderTokenTotals } from "../shared/token-view.js";
 
 // ============================================================================
 // Constants
 // ============================================================================
 
-const STORAGE_KEY = "numr-document";
 const WASM_ASSET_VERSION = __NUMR_ASSET_VERSION__;
 const SHARE_DEFAULT_TITLE = "Share document link";
 const SHARE_NATIVE_TITLE = "numr document";
@@ -69,12 +69,15 @@ let session = null;
 let ratesService = null;
 let editor = null;
 let documentSaveTimer = null;
+let sharedDocumentActive = false;
 
 // DOM element references (populated in init)
 const $ = {
 	editorHost: null,
 	totals: null,
 	btnRates: null,
+	btnWrap: null,
+	btnLineNumbers: null,
 	btnShare: null,
 	btnNew: null,
 	btnSave: null,
@@ -147,6 +150,8 @@ async function init() {
 	$.editorHost = document.getElementById("editor");
 	$.totals = document.getElementById("totals");
 	$.btnRates = document.getElementById("btn-rates");
+	$.btnWrap = document.getElementById("btn-wrap");
+	$.btnLineNumbers = document.getElementById("btn-line-numbers");
 	$.btnShare = document.getElementById("btn-share");
 	$.btnNew = document.getElementById("btn-new");
 	$.btnSave = document.getElementById("btn-save");
@@ -154,7 +159,7 @@ async function init() {
 	$.fileInput = document.getElementById("file-input");
 	updateShareStatus("idle");
 
-	// Initialize WASM (includes rate fetching)
+	// Initialize WASM; exchange rates continue loading in the background.
 	try {
 		await initWasm();
 	} catch (e) {
@@ -165,13 +170,25 @@ async function init() {
 	}
 
 	// Load shared content first, then localStorage/example fallback
-	const initialContent = await getInitialContent();
+	const initialDocument = await getInitialDocument();
+	sharedDocumentActive = initialDocument.shared;
+	const storedLineWrapping = safeStorage.getItem(STORAGE_KEYS.lineWrapping);
+	const lineWrapping =
+		storedLineWrapping === null || storedLineWrapping === "true";
+	const storedLineNumbers = safeStorage.getItem(STORAGE_KEYS.lineNumbers);
+	const showLineNumbers =
+		storedLineNumbers === null || storedLineNumbers === "true";
 	editor = new NumrEditor({
 		parent: $.editorHost,
 		session,
-		content: initialContent,
+		content: initialDocument.content,
+		lineWrapping,
+		showLineNumbers,
+		onDocumentChange: handleDocumentChange,
 		onChange: handleEvaluation,
 	});
+	updateLineWrappingControl();
+	updateLineNumbersControl();
 	// Focus editor
 	editor.focus();
 
@@ -184,6 +201,8 @@ async function init() {
 // ============================================================================
 
 function setupEventListeners() {
+	$.btnWrap?.addEventListener("click", toggleLineWrapping);
+	$.btnLineNumbers?.addEventListener("click", toggleLineNumbers);
 	$.btnRates.addEventListener("click", () => {
 		if (rateStatus !== "loading") fetchRates("manual");
 	});
@@ -198,13 +217,64 @@ function setupEventListeners() {
 // Core Logic
 // ============================================================================
 
-function handleEvaluation({ content, totals }) {
+function handleDocumentChange(content) {
+	if (sharedDocumentActive) {
+		window.history.replaceState(
+			null,
+			"",
+			`${window.location.pathname}${window.location.search}`,
+		);
+		sharedDocumentActive = false;
+	}
 	if (documentSaveTimer) clearTimeout(documentSaveTimer);
 	documentSaveTimer = setTimeout(() => {
-		localStorage.setItem(STORAGE_KEY, content);
+		safeStorage.setItem(STORAGE_KEYS.document, content);
 		documentSaveTimer = null;
 	}, 250);
+}
+
+function handleEvaluation({ totals }) {
 	renderTokenTotals($.totals, session, totals);
+}
+
+function toggleLineWrapping() {
+	if (!editor) return;
+	editor.setLineWrapping(!editor.lineWrapping);
+	safeStorage.setItem(
+		STORAGE_KEYS.lineWrapping,
+		String(editor.lineWrapping),
+	);
+	updateLineWrappingControl();
+}
+
+function updateLineWrappingControl() {
+	if (!$.btnWrap || !editor) return;
+	const enabled = editor.lineWrapping;
+	const label = enabled ? "Disable line wrapping" : "Wrap long lines";
+	$.btnWrap.classList.toggle("active", enabled);
+	$.btnWrap.setAttribute("aria-pressed", String(enabled));
+	$.btnWrap.setAttribute("aria-label", label);
+	$.btnWrap.title = label;
+}
+
+function toggleLineNumbers() {
+	if (!editor) return;
+	editor.setLineNumbers(!editor.showLineNumbers);
+	safeStorage.setItem(
+		STORAGE_KEYS.lineNumbers,
+		String(editor.showLineNumbers),
+	);
+	updateLineNumbersControl();
+}
+
+function updateLineNumbersControl() {
+	if (!$.btnLineNumbers || !editor) return;
+	const enabled = editor.showLineNumbers;
+	const label = enabled ? "Hide line numbers" : "Show line numbers";
+	$.btnLineNumbers.classList.toggle("active", enabled);
+	$.btnLineNumbers.setAttribute("aria-pressed", String(enabled));
+	$.btnLineNumbers.setAttribute("aria-label", label);
+	$.btnLineNumbers.title = label;
 }
 
 // ============================================================================
@@ -222,7 +292,6 @@ function newDocument() {
 	if (content.trim()) {
 		trackEvent("New Document Created");
 	}
-	session?.clear();
 	editor.setContent("");
 	editor.focus();
 }
@@ -257,7 +326,7 @@ function loadFile(event) {
 	reader.onload = (e) => {
 		const loadedContent =
 			typeof e.target?.result === "string" ? e.target.result : "";
-		openDocument(loadedContent, "file_import", file.name);
+		openDocument(loadedContent);
 	};
 	reader.readAsText(file);
 
@@ -273,11 +342,8 @@ async function shareDocument() {
 	updateShareStatus("loading", "Preparing link...");
 
 	try {
-		const share = getShareLink();
-		if (!share) return;
-		const { hashPayload, shareUrl } = share;
-
-		window.history.replaceState(null, "", `#${hashPayload}`);
+		const shareUrl = getShareUrl();
+		if (!shareUrl) return;
 
 		const nativeShareResult = await tryNativeShare(shareUrl);
 		if (nativeShareResult === "success") {
@@ -316,23 +382,23 @@ async function shareDocument() {
 
 function publishDocument() {
 	if (!editor) return;
-	const share = getShareLink();
-	if (!share) return;
+	const shareUrl = getShareUrl();
+	if (!shareUrl) return;
 
 	window.dispatchEvent(
-		new CustomEvent("numr-publish", { detail: { url: share.shareUrl } }),
+		new CustomEvent("numr-publish", { detail: { url: shareUrl } }),
 	);
 	trackShareCreated("publish");
 	updateShareStatus("success", "Opened in browser");
 }
 
-function getShareLink() {
+function getShareUrl() {
 	const content = editor.getContent();
 	const hashPayload = encodeContentForHash(content);
 	const shareUrl = buildShareUrl(hashPayload);
 
 	if (shareUrl.length <= SHARE_URL_HARD_LIMIT) {
-		return { hashPayload, shareUrl };
+		return shareUrl;
 	}
 
 	updateShareStatus("error", "Link is too large. Use Download");
@@ -357,6 +423,7 @@ function getShareStatusMessage(urlLength, copied) {
 }
 
 async function tryNativeShare(url) {
+	if (typeof window.numrCopyText === "function") return "unsupported";
 	if (typeof navigator.share !== "function") return "unsupported";
 
 	try {
@@ -374,11 +441,11 @@ async function tryNativeShare(url) {
 	}
 }
 
-async function getInitialContent() {
+async function getInitialDocument() {
 	const sharedContent = await readContentFromHash();
-	if (sharedContent !== null) return sharedContent;
-	const saved = localStorage.getItem(STORAGE_KEY);
-	return saved || EXAMPLE_CONTENT;
+	if (sharedContent !== null) return { content: sharedContent, shared: true };
+	const saved = safeStorage.getItem(STORAGE_KEYS.document);
+	return { content: saved ?? EXAMPLE_CONTENT, shared: false };
 }
 
 async function readContentFromHash() {
@@ -403,6 +470,14 @@ async function readContentFromHash() {
 }
 
 async function copyText(text) {
+	if (typeof window.numrCopyText === "function") {
+		try {
+			return await window.numrCopyText(text);
+		} catch {
+			return false;
+		}
+	}
+
 	if (navigator.clipboard?.writeText && window.isSecureContext) {
 		try {
 			await navigator.clipboard.writeText(text);
@@ -501,11 +576,12 @@ window.numrActions = {
 	saveDocument: saveFile,
 	publishDocument,
 	refreshRates: () => fetchRates("manual"),
+	toggleLineWrapping,
 };
 
 window.addEventListener("beforeunload", () => {
 	if (documentSaveTimer && editor) {
-		localStorage.setItem(STORAGE_KEY, editor.getContent());
+		safeStorage.setItem(STORAGE_KEYS.document, editor.getContent());
 	}
 });
 

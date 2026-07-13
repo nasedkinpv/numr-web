@@ -11,47 +11,42 @@ export class NumrSession {
 			engine: new wasm.WasmEngine(),
 			tokenize: wasm.tokenize,
 			tokenizeWithVariables: wasm.tokenizeWithVariables,
+			expressionPrefixUtf16Len: wasm.expressionPrefixUtf16Len,
 		});
 	}
 
-	constructor({ engine, tokenize, tokenizeWithVariables }) {
+	constructor({
+		engine,
+		tokenize,
+		tokenizeWithVariables,
+		expressionPrefixUtf16Len,
+	}) {
 		this.engine = engine;
 		this.tokenize = tokenize;
 		this.tokenizeWithVariables = tokenizeWithVariables;
+		this.expressionPrefixUtf16Len = expressionPrefixUtf16Len;
 		this.variableNames = "";
 	}
 
 	evaluateDocument(content) {
-		if (this.engine.eval_document_full) {
-			const document = parseWasmJson(
-				this.engine.eval_document_full(content),
-				"document",
-			);
-			this.variableNames = document.variable_names || "";
-			return { results: document.results, totals: document.totals };
-		}
-
-		const evaluation = {
-			results: parseWasmJson(this.engine.eval_document(content), "document"),
-			totals: this.getTotals(),
-		};
-		this.variableNames = this.engine.get_variable_names?.() || "";
-		return evaluation;
-	}
-
-	getTotals() {
-		return parseWasmJson(this.engine.get_totals(), "totals");
+		const document = parseWasmJson(
+			this.engine.eval_document_full(content),
+			"document",
+		);
+		this.variableNames = document.variable_names || "";
+		return { results: document.results, totals: document.totals };
 	}
 
 	getVariableNames() {
-		return this.variableNames || this.engine.get_variable_names?.() || "";
+		return this.variableNames;
 	}
 
 	getCryptoCurrencies() {
-		const payload = this.engine.get_currency_catalog?.();
-		if (!payload) return [];
 		try {
-			return parseWasmJson(payload, "currency catalog").filter(
+			return parseWasmJson(
+				this.engine.get_currency_catalog(),
+				"currency catalog",
+			).filter(
 				({ is_crypto: isCrypto, coingecko_id: id }) => isCrypto && id,
 			);
 		} catch {
@@ -74,13 +69,12 @@ export class NumrSession {
 		}
 	}
 
-	applyRates(rates) {
-		this.engine.apply_rates(JSON.stringify(rates));
+	expressionPrefixLength(text) {
+		return this.expressionPrefixUtf16Len(text);
 	}
 
-	clear() {
-		this.engine.clear();
-		this.variableNames = "";
+	applyRates(rates) {
+		this.engine.apply_rates(JSON.stringify(rates));
 	}
 
 	dispose() {

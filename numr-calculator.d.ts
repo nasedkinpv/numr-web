@@ -30,6 +30,9 @@ export class NumrCalculator extends HTMLElement {
   /** Make editor read-only (non-editable) */
   readonly: boolean;
 
+  /** Wrap long editor lines */
+  wrap: boolean;
+
   /** Skip fetching exchange rates */
   norates: boolean;
 

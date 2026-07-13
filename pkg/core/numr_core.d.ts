@@ -2,63 +2,31 @@
 /* eslint-disable */
 
 /**
- * WASM-compatible wrapper for the numr Engine
+ * WASM-compatible wrapper for the numr engine.
  */
 export class WasmEngine {
     free(): void;
     [Symbol.dispose](): void;
     /**
-     * Apply exchange rates from JSON object: {"EUR": 0.92, "BTC": 95000, ...}
+     * Apply exchange rates from a JSON object: {"EUR": 0.92, "BTC": 95000, ...}.
      */
     apply_rates(rates_json: string): number;
-    /**
-     * Clear all state
-     */
-    clear(): void;
-    /**
-     * Evaluate a single line and return the result as a JSON string
-     */
-    eval(input: string): string;
-    /**
-     * Evaluate multiple lines from a document, returns JSON array of results
-     */
-    eval_document(content: string): string;
     /**
      * Evaluate a document and return results, totals, and variable names together.
      */
     eval_document_full(content: string): string;
     /**
-     * Evaluate without storing the result (for live preview)
-     */
-    eval_preview(input: string): string;
-    /**
      * Currency and rate-provider metadata from the core registry.
      */
     get_currency_catalog(): string;
     /**
-     * Get all line results as JSON
-     */
-    get_lines(): string;
-    /**
-     * Get grouped totals as JSON
-     */
-    get_totals(): string;
-    /**
-     * Get user variable names, one per line.
-     */
-    get_variable_names(): string;
-    /**
-     * Get all variables as JSON
-     */
-    get_variables(): string;
-    /**
-     * Create a new engine instance
+     * Create an engine without filesystem or network I/O.
      */
     constructor();
 }
 
 /**
- * Initialize panic hook for better error messages in the browser console
+ * Initialize the browser panic hook once.
  */
 export function init(): void;
 
@@ -68,16 +36,8 @@ export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_wasmengine_free: (a: number, b: number) => void;
     readonly wasmengine_apply_rates: (a: number, b: number, c: number, d: number) => void;
-    readonly wasmengine_clear: (a: number) => void;
-    readonly wasmengine_eval: (a: number, b: number, c: number, d: number) => void;
-    readonly wasmengine_eval_document: (a: number, b: number, c: number, d: number) => void;
     readonly wasmengine_eval_document_full: (a: number, b: number, c: number, d: number) => void;
-    readonly wasmengine_eval_preview: (a: number, b: number, c: number, d: number) => void;
     readonly wasmengine_get_currency_catalog: (a: number, b: number) => void;
-    readonly wasmengine_get_lines: (a: number, b: number) => void;
-    readonly wasmengine_get_totals: (a: number, b: number) => void;
-    readonly wasmengine_get_variable_names: (a: number, b: number) => void;
-    readonly wasmengine_get_variables: (a: number, b: number) => void;
     readonly wasmengine_new: () => number;
     readonly init: () => void;
     readonly __wbindgen_export: (a: number, b: number, c: number) => void;

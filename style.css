@@ -5,34 +5,37 @@
  * Main: LineNumbers | Editor | Results
  *
  * Key design decisions:
- * - No line wrapping: guarantees 1 line = 1 row alignment
+ * - CodeMirror owns wrapping and gutter row geometry
  * - Monospace font: consistent character width
- * - Fixed line-height: all columns stay aligned
+ * - Shared line metrics keep the editor and both gutters aligned
  */
 
 :root {
-    /* Cool muted palette */
-    --bg-primary: #1a1c1e;
-    --bg-secondary: #1f2225;
-    --text-primary: #e8eaed;
-    --text-muted: #6b7280;
-    --accent: #a8b4f4;        /* Pale blue */
-    --success: #7dd3a8;       /* Cool mint */
-    --error: #f4a8a8;         /* Pale rose */
-    --border: #2a2e32;
+    /* Shared color contract for web, component, and desktop surfaces. */
+    --numr-bg-primary: #1a1c1e;
+    --numr-bg-secondary: #1f2225;
+    --numr-text-primary: #e8eaed;
+    --numr-text-muted: #6b7280;
+    --numr-accent: #eceef4;
+    --numr-success: #7dd3a8;
+    --numr-error: #f4a8a8;
+    --numr-danger: #ff6b6b;
+    --numr-border: #2a2e32;
+    --numr-selection: rgba(236, 238, 244, 0.22);
+    --numr-token-number: #b898f4;
+    --numr-token-operator: #f47898;
+    --numr-token-variable: #f4a860;
+    --numr-token-unit: #f4e878;
+    --numr-token-currency: #f4c244;
+    --numr-token-comment: #7d7868;
+    --numr-token-text: #eceef4;
+    --numr-token-punctuation: #a8a498;
 
     /* Modern monospace font stack - system fonts first for performance */
     --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, 'Cascadia Code', 'Consolas', 'Liberation Mono', Menlo, Monaco, monospace;
     --font-size: clamp(0.75rem, 1.2vw + 0.4rem, 0.875rem);  /* 12px-14px, fluid */
     --line-height: 1.5em;  /* Relative to font-size */
 
-    /* Shared editor contract (standalone page, component, and desktop). */
-    --numr-bg-primary: var(--bg-primary);
-    --numr-text-primary: var(--text-primary);
-    --numr-text-muted: var(--text-muted);
-    --numr-accent: var(--accent);
-    --numr-error: var(--error);
-    --numr-border: var(--border);
     --numr-font-mono: var(--font-mono);
     --numr-font-size: var(--font-size);
     --numr-line-height: var(--line-height);
@@ -45,8 +48,8 @@ body {
     font-family: var(--font-mono);
     font-size: var(--font-size);
     line-height: var(--line-height);
-    background: var(--bg-primary);
-    color: var(--text-primary);
+    background: var(--numr-bg-primary);
+    color: var(--numr-text-primary);
     height: 100vh;
     height: 100dvh;  /* Dynamic viewport height - better mobile support */
 }
@@ -57,8 +60,6 @@ body {
     flex-direction: column;
     height: 100vh;
     height: 100dvh;
-    max-width: 1200px;
-    margin: 0 auto;
 }
 
 /* Header */
@@ -69,23 +70,26 @@ header {
     min-height: 2rem;
     padding: 0.25rem 0.5rem;
     padding-right: calc(0.5rem + 8px);  /* Account for scrollbar width */
-    background: var(--bg-secondary);
-    border-bottom: 1px solid var(--border);
+    background: var(--numr-bg-secondary);
+    border-bottom: 1px solid var(--numr-border);
     flex-shrink: 0;
 }
 
 .logo {
     display: flex;
     align-items: center;
-    margin-left: 0.25rem;
+    margin-left: 0.125rem;
 }
 
 .logo img {
     height: 14px;
     width: auto;
+    margin-top: 2px;
+    opacity: 0.82;
+    transition: opacity 180ms ease;
 }
 
-/* Shimmer effect container */
+/* A single, intentional shimmer pass on pointer hover. */
 .logo a, .logo {
     position: relative;
 }
@@ -93,68 +97,89 @@ header {
 .logo::after {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(
-        90deg,
-        transparent 0%,
-        transparent 45%,
-        #4ade80 48%,
-        #22d3ee 50%,
-        #4ade80 52%,
-        transparent 55%,
-        transparent 100%
-    );
-    background-size: 400% 100%;
-    mix-blend-mode: screen;
-    opacity: 0.8;
-    animation: crt-shimmer 8s ease-in-out infinite;
+    inset: 0;
+    background: url('numr-wordmark.svg?v=6e22619eeb') center / contain no-repeat;
+    filter: brightness(1.28);
+    clip-path: polygon(-28% 0, -8% 0, 2% 100%, -18% 100%);
+    opacity: 0;
     pointer-events: none;
-    mask-image: url('NUMR.svg');
-    mask-size: contain;
-    mask-repeat: no-repeat;
-    mask-position: center;
-    -webkit-mask-image: url('NUMR.svg');
-    -webkit-mask-size: contain;
-    -webkit-mask-repeat: no-repeat;
-    -webkit-mask-position: center;
 }
 
-@keyframes crt-shimmer {
-    0%, 100% {
-        background-position: 200% 0;
+@media (hover: hover) and (pointer: fine) {
+    .logo:hover img {
+        opacity: 1;
+    }
+
+    .logo:hover::after {
+        animation: logo-shimmer 850ms linear;
+    }
+}
+
+@keyframes logo-shimmer {
+    0% {
+        clip-path: polygon(-28% 0, -8% 0, 2% 100%, -18% 100%);
         opacity: 0;
     }
-    10% { opacity: 0.6; }
-    50% {
-        background-position: -200% 0;
-        opacity: 0.9;
+    12% { opacity: 0.9; }
+    88% { opacity: 0.9; }
+    100% {
+        clip-path: polygon(108% 0, 128% 0, 118% 100%, 98% 100%);
+        opacity: 0;
     }
-    90% { opacity: 0.6; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .logo:hover::after {
+        animation: none;
+    }
 }
 
 .actions {
     display: flex;
-    gap: 0.75rem;
+    gap: 0.25rem;
 }
 
-.actions button {
+.actions button,
+.footer-actions button {
     background: transparent;
-    color: var(--text-muted);
+    color: var(--numr-text-muted);
     border: none;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
+    flex: none;
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0;
+    font: inherit;
+    line-height: 1;
+    border-radius: 7px;
 }
 
-.actions button:hover {
-    color: var(--accent);
+.actions button.active,
+.footer-actions button.active {
+    color: var(--numr-accent);
 }
 
-.actions button svg {
+.footer-actions button.active {
+    background: color-mix(in srgb, var(--numr-accent) 10%, transparent);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .actions button:hover,
+    .footer-actions button:hover {
+        color: color-mix(in srgb, var(--numr-accent) 75%, var(--numr-text-muted));
+    }
+
+    .footer-actions button.active:hover {
+        color: var(--numr-accent);
+        background: color-mix(in srgb, var(--numr-accent) 16%, transparent);
+    }
+}
+
+.actions button svg,
+.footer-actions button svg {
     width: 14px;
     height: 14px;
 }
@@ -175,19 +200,19 @@ header {
 }
 
 #btn-rates.success {
-    color: var(--success);
+    color: var(--numr-success);
 }
 
 #btn-rates.error {
-    color: var(--error);
+    color: var(--numr-error);
 }
 
 #btn-share.success {
-    color: var(--success);
+    color: var(--numr-success);
 }
 
 #btn-share.error {
-    color: var(--error);
+    color: var(--numr-error);
 }
 
 #btn-share.loading {
@@ -203,14 +228,14 @@ header {
 }
 
 /* Footer token colors use the same classes as the editor gutters. */
-.numr-token-number { color: #b898f4; }
-.numr-token-operator, .numr-token-keyword { color: #f47898; }
-.numr-token-variable { color: #f4a860; }
-.numr-token-unit { color: #A8B4F4; }
-.numr-token-currency, .numr-token-function { color: #f4c244; }
-.numr-token-comment { color: #7d7868; font-style: italic; }
-.numr-token-text { color: #f4e878; }
-.numr-token-punctuation { color: #a8a498; }
+.numr-token-number { color: var(--numr-token-number); }
+.numr-token-operator, .numr-token-keyword { color: var(--numr-token-operator); }
+.numr-token-variable { color: var(--numr-token-variable); }
+.numr-token-unit { color: var(--numr-token-unit); }
+.numr-token-currency, .numr-token-function { color: var(--numr-token-currency); }
+.numr-token-comment { color: var(--numr-token-comment); font-style: italic; }
+.numr-token-text { color: var(--numr-token-text); }
+.numr-token-punctuation { color: var(--numr-token-punctuation); }
 
 /* Footer */
 footer {
@@ -218,18 +243,23 @@ footer {
     justify-content: flex-start;
     align-items: center;
     min-height: 2rem;
-    padding: 0.25rem 0.5rem;
-    padding-right: calc(0.5rem + 8px);  /* Account for scrollbar width */
-    background: var(--bg-secondary);
-    border-top: 1px solid var(--border);
+    padding: 0.33rem 0.75rem 0.4rem 0.5rem;
+    background: var(--numr-bg-secondary);
+    border-top: 1px solid var(--numr-border);
     flex-shrink: 0;
     overflow-x: auto;
 }
 
-#totals { min-width: max-content; margin-left: auto; white-space: pre; }
-.total-label { color: var(--text-muted); }
+.footer-actions {
+    display: flex;
+    flex: none;
+    gap: 0.25rem;
+}
+
+#totals { min-width: max-content; margin-left: auto; padding-left: 0.5rem; white-space: pre; }
+.total-label { color: var(--numr-text-muted); }
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: var(--bg-secondary); }
-::-webkit-scrollbar-thumb { background: var(--border); }
+::-webkit-scrollbar-track { background: var(--numr-bg-secondary); }
+::-webkit-scrollbar-thumb { background: var(--numr-border); }

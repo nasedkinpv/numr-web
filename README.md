@@ -7,7 +7,7 @@ Web interface and reusable custom element for [numr](https://github.com/nasedkin
 Use `<numr-calculator>` anywhere:
 
 ```html
-<script type="module" src="https://numr.cc/numr-calculator.js?v=a3d2481f30"></script>
+<script type="module" src="https://numr.cc/numr-calculator.js?v=5de60c1b1c"></script>
 
 <numr-calculator></numr-calculator>
 ```
@@ -19,6 +19,7 @@ Use `<numr-calculator>` anywhere:
 | `content` | Initial document content |
 | `minimal` | Hide header and footer |
 | `readonly` | Make the editor non-editable |
+| `wrap` | Wrap long editor lines |
 | `norates` | Skip cached and network exchange-rate loading |
 | `autosave` | Persist the document to `localStorage` |
 | `storage-key` | Override the autosave key |
@@ -47,11 +48,26 @@ numr-calculator {
   --numr-bg-primary: #1a1c1e;
   --numr-bg-secondary: #1f2225;
   --numr-text-primary: #e8eaed;
-  --numr-accent: #a8b4f4;
+  --numr-text-muted: #6b7280;
+  --numr-accent: #eceef4;
   --numr-success: #7dd3a8;
   --numr-error: #f4a8a8;
+  --numr-border: #2a2e32;
+  --numr-selection: rgba(236, 238, 244, 0.22);
+  --numr-token-number: #b898f4;
+  --numr-token-operator: #f47898;
+  --numr-token-variable: #f4a860;
+  --numr-token-unit: #f4e878;
+  --numr-token-currency: #f4c244;
+  --numr-token-comment: #7d7868;
+  --numr-token-text: #eceef4;
+  --numr-token-punctuation: #a8a498;
 }
 ```
+
+Typography can be adjusted with `--numr-font`, `--numr-font-mono`,
+`--numr-font-size`, and `--numr-line-height`. The open shadow root exposes the
+`container`, `header`, `editor`, and `footer` CSS parts.
 
 The package contains a self-contained web-component bundle, its TypeScript declaration, and both generated WASM packages under `pkg/core` and `pkg/editor`. Consumers do not need CDN runtime dependencies or a separate WASM download as long as they preserve this package layout or set `base-path` to an equivalent layout.
 
@@ -71,9 +87,10 @@ To regenerate WASM first, use `npm run build` before `npm run serve`.
 
 The standalone web app, native Electrobun view, and `<numr-calculator>` share one browser runtime:
 
-- `NumrEditor` owns the CodeMirror document, native platform keymap, history, virtualized visible-line highlighting, line/error gutter, result gutter, and the single scroll surface.
+- `NumrEditor` owns the CodeMirror document, native platform keymap, history, line wrapping, virtualized visible-line highlighting, optional line numbers, result anchoring, and the single scroll surface. Standalone web and desktop views wrap by default and persist their wrap/line-number toggles locally.
 - `NumrSession` wraps generated WASM classes, validates/parses their JSON payloads, and exposes document results, totals, variables, tokens, the core currency catalog, and rate application as plain JavaScript values.
-- `RatesService` owns cache freshness, 10-second request timeouts, concurrent fiat/crypto requests, partial-provider success, coalesced refreshes, and request cleanup. Crypto provider IDs come from the core catalog; the local list is only a compatibility fallback for older WASM packages.
+- `RatesService` owns cache freshness, 10-second request timeouts, concurrent fiat/crypto requests, partial-provider success, coalesced refreshes, and request cleanup. Crypto provider IDs come from the core catalog.
+- `storage` provides best-effort Web Storage access for documents, view settings, component autosave, and rate caches. Shared links remain isolated until edited; the first edit clears the snapshot hash and becomes the local working document. Electrobun's default `persist:default` BrowserView keeps `views://` storage across app launches, separately from the `https://numr.cc` origin.
 - `token-view` maps trusted tokenizer output to safe DOM nodes and CodeMirror decoration ranges without HTML injection.
 - `wasm-loader` shares module imports and removes rejected imports from its cache so retries can recover.
 
@@ -99,12 +116,16 @@ This is also the layout created by web CI.
 - [wasm-pack](https://rustwasm.github.io/wasm-pack/installer/)
 - Node.js 22 or newer
 - Bun 1.3 or newer
+- Playwright Chromium and WebKit (`npx playwright install chromium webkit`)
 
 ### Checks and Builds
 
 ```bash
 # JavaScript syntax, version synchronization, and contract tests
 npm run check
+
+# Real-browser wrapping, result alignment, resize, and gutter regressions
+npm run test:browser
 
 # Clean and rebuild both locked WASM packages and local browser bundles;
 # then refresh generated asset query strings
@@ -135,14 +156,19 @@ npm run desktop:dev:fresh
 npm run desktop:build
 ```
 
-`desktop:check` refreshes the shared browser bundle and bundles the native Bun and browser entrypoints independently before
-Electrobun starts. `desktop:build:quick` produces the same stable package for local checks
-when the committed `pkg/` artifacts are already current.
+`desktop:check` refreshes the shared browser bundle and bundles the native Bun
+and browser entrypoints independently before Electrobun starts.
+`desktop:build:quick` produces the same stable package for local checks when the
+committed `pkg/` artifacts are already current.
 
 The desktop shell is controlled from its tray menu. It uses a frameless,
 rounded transparent window with an in-app Hide button; on macOS it runs as an
 accessory app without a Dock icon. Quit remains explicit in both the application
 and tray menus.
+
+macOS packages compile `desktop/numr.icon` with Xcode's `actool`; Windows and
+Linux use the exported app icons beside it. Tray assets remain platform-specific:
+a monochrome alpha template on macOS, ICO on Windows, and PNG on Linux.
 
 ## Docker Deployment
 
@@ -174,9 +200,11 @@ numr-web/
 │       ├── numr-editor.js    # Shared editor, gutters, keymap, viewport rendering
 │       ├── numr-session.js   # Stable WASM adapter
 │       ├── rates-service.js  # Browser rate/cache policy
+│       ├── share-codec.js    # Backward-compatible share link codec
+│       ├── storage.js        # Safe Web Storage boundary
 │       ├── token-view.js     # Safe semantic-token DOM/ranges
 │       └── wasm-loader.js    # Shared generated-module loading
-├── tests/                    # Node contract tests
+├── tests/                    # Node contracts and browser lifecycle/layout tests
 ├── scripts/                  # Version and asset checks
 ├── pkg/
 │   ├── core/                 # Generated numr-core WASM package

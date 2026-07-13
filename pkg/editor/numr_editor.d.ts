@@ -2,6 +2,11 @@
 /* eslint-disable */
 
 /**
+ * Return the UTF-16 offset where the executable expression ends.
+ */
+export function expressionPrefixUtf16Len(input: string): number;
+
+/**
  * Initialize panic hook for better error messages in the browser console
  */
 export function init(): void;
@@ -20,6 +25,7 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
+    readonly expressionPrefixUtf16Len: (a: number, b: number) => number;
     readonly tokenize: (a: number, b: number, c: number) => void;
     readonly tokenizeWithVariables: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly init: () => void;
