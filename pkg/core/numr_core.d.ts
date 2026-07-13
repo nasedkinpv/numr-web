@@ -35,10 +35,10 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_wasmengine_free: (a: number, b: number) => void;
-    readonly wasmengine_apply_rates: (a: number, b: number, c: number, d: number) => void;
+    readonly wasmengine_new: () => number;
     readonly wasmengine_eval_document_full: (a: number, b: number, c: number, d: number) => void;
     readonly wasmengine_get_currency_catalog: (a: number, b: number) => void;
-    readonly wasmengine_new: () => number;
+    readonly wasmengine_apply_rates: (a: number, b: number, c: number, d: number) => void;
     readonly init: () => void;
     readonly __wbindgen_export: (a: number, b: number, c: number) => void;
     readonly __wbindgen_export2: (a: number, b: number) => number;
