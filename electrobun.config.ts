@@ -4,7 +4,7 @@ export default {
 	app: {
 		name: "numr",
 		identifier: "cc.numr.desktop",
-		version: "0.7.0",
+		version: "0.8.0",
 		fileAssociations: [
 			{
 				name: "numr document",
@@ -23,15 +23,11 @@ export default {
 			},
 		},
 		copy: {
+			"desktop/numr-tray-sf-template.png":
+				"views/assets/numr-tray-sf-template.png",
 			"desktop/index.html": "views/mainview/index.html",
 			"desktop/desktop.css": "views/mainview/desktop.css",
 			"app.js": "views/mainview/app.js",
-			"src/shared/wasm-loader.js": "views/mainview/src/shared/wasm-loader.js",
-			"src/shared/numr-session.js": "views/mainview/src/shared/numr-session.js",
-			"src/shared/rates-service.js": "views/mainview/src/shared/rates-service.js",
-			"src/shared/share-codec.js": "views/mainview/src/shared/share-codec.js",
-			"src/shared/token-renderer.js":
-				"views/mainview/src/shared/token-renderer.js",
 			"style.css": "views/mainview/style.css",
 			"NUMR.svg": "views/mainview/NUMR.svg",
 			"favicon.ico": "views/mainview/favicon.ico",

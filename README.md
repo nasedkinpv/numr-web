@@ -7,7 +7,7 @@ Web interface and reusable custom element for [numr](https://github.com/nasedkin
 Use `<numr-calculator>` anywhere:
 
 ```html
-<script type="module" src="https://numr.cc/numr-calculator.js?v=d088827366"></script>
+<script type="module" src="https://numr.cc/numr-calculator.js?v=a3d2481f30"></script>
 
 <numr-calculator></numr-calculator>
 ```
@@ -53,7 +53,7 @@ numr-calculator {
 }
 ```
 
-The package file list includes the web component, its TypeScript declaration, shared runtime modules, and both generated WASM packages under `pkg/core` and `pkg/editor`. Consumers do not need a separate WASM download as long as they preserve this package layout or set `base-path` to an equivalent layout.
+The package contains a self-contained web-component bundle, its TypeScript declaration, and both generated WASM packages under `pkg/core` and `pkg/editor`. Consumers do not need CDN runtime dependencies or a separate WASM download as long as they preserve this package layout or set `base-path` to an equivalent layout.
 
 ## Quick Start
 
@@ -69,14 +69,15 @@ To regenerate WASM first, use `npm run build` before `npm run serve`.
 
 ## Architecture
 
-Both the standalone app and `<numr-calculator>` use the same small adapters:
+The standalone web app, native Electrobun view, and `<numr-calculator>` share one browser runtime:
 
+- `NumrEditor` owns the CodeMirror document, native platform keymap, history, virtualized visible-line highlighting, line/error gutter, result gutter, and the single scroll surface.
 - `NumrSession` wraps generated WASM classes, validates/parses their JSON payloads, and exposes document results, totals, variables, tokens, the core currency catalog, and rate application as plain JavaScript values.
 - `RatesService` owns cache freshness, 10-second request timeouts, concurrent fiat/crypto requests, partial-provider success, coalesced refreshes, and request cleanup. Crypto provider IDs come from the core catalog; the local list is only a compatibility fallback for older WASM packages.
-- `token-renderer` owns escaped semantic-token HTML so the app and component cannot drift.
+- `token-view` maps trusted tokenizer output to safe DOM nodes and CodeMirror decoration ranges without HTML injection.
 - `wasm-loader` shares module imports and removes rejected imports from its cache so retries can recover.
 
-Views own DOM and product behavior; shared adapters own generated-WASM and rate-provider contracts.
+The custom element is a native Shadow DOM element, not a second editor implementation. Bun builds local CodeMirror dependencies into the two committed browser entrypoints, so numr.cc, npm consumers, and Electrobun never depend on a runtime CDN.
 
 ## Development
 
@@ -97,6 +98,7 @@ This is also the layout created by web CI.
 - Rust 1.88 or newer with the `wasm32-unknown-unknown` target
 - [wasm-pack](https://rustwasm.github.io/wasm-pack/installer/)
 - Node.js 22 or newer
+- Bun 1.3 or newer
 
 ### Checks and Builds
 
@@ -104,7 +106,7 @@ This is also the layout created by web CI.
 # JavaScript syntax, version synchronization, and contract tests
 npm run check
 
-# Clean and rebuild both locked, no-default-feature WASM packages;
+# Clean and rebuild both locked WASM packages and local browser bundles;
 # then refresh generated asset query strings
 npm run build
 
@@ -112,18 +114,35 @@ npm run build
 npm run serve
 ```
 
-The core and editor builds use `--no-default-features --features wasm --locked`. Native Rust release builds optimize for runtime speed; these web entrypoints override `opt-level` to `z`, followed by `wasm-opt -Oz`, to keep artifacts small.
+The core and editor builds use `--no-default-features --features wasm --locked`. Native Rust release builds optimize for runtime speed; these web entrypoints override `opt-level` to `z`, followed by `wasm-opt -Oz`, to keep artifacts small. `npm run build:frontend` rebuilds the browser entrypoints and asset stamps without rebuilding WASM; use it for the fast JavaScript/CSS loop when the committed WASM artifacts are already current.
 
 `npm run check:versions` requires the main Cargo workspace, this package, `electrobun.config.ts`, and both generated WASM package manifests to use the same version. `npm run build` performs that check after regenerating the WASM manifests, so it works directly after a version bump.
 
 Generated `pkg/` bindings and asset stamps are committed. CI rebuilds them and fails on any diff, so review and commit generated changes together with the source interface that produced them.
 
-Desktop smoke test on macOS:
+### Desktop development
 
 ```bash
 bun install
-bun run desktop:build
+
+# Fast loop for TypeScript, HTML, and CSS changes using the existing WASM build
+npm run desktop:dev
+
+# Regenerate WASM first after changing numr-core or numr-editor
+npm run desktop:dev:fresh
+
+# Reproducible stable package build, including a fresh WASM build
+npm run desktop:build
 ```
+
+`desktop:check` refreshes the shared browser bundle and bundles the native Bun and browser entrypoints independently before
+Electrobun starts. `desktop:build:quick` produces the same stable package for local checks
+when the committed `pkg/` artifacts are already current.
+
+The desktop shell is controlled from its tray menu. It uses a frameless,
+rounded transparent window with an in-app Hide button; on macOS it runs as an
+accessory app without a Dock icon. Quit remains explicit in both the application
+and tray menus.
 
 ## Docker Deployment
 
@@ -148,17 +167,20 @@ numr-web/
 ├── app.js                    # Standalone app view
 ├── numr-calculator.js        # Reusable custom element
 ├── numr-calculator.d.ts      # TypeScript public interface
-├── src/shared/
-│   ├── numr-session.js       # Stable WASM adapter
-│   ├── rates-service.js      # Browser rate/cache policy
-│   ├── token-renderer.js     # Shared safe token HTML
-│   └── wasm-loader.js        # Shared generated-module loading
+├── src/
+│   ├── web/app.js            # Standalone/desktop product shell
+│   ├── component/            # Thin native custom element
+│   └── shared/
+│       ├── numr-editor.js    # Shared editor, gutters, keymap, viewport rendering
+│       ├── numr-session.js   # Stable WASM adapter
+│       ├── rates-service.js  # Browser rate/cache policy
+│       ├── token-view.js     # Safe semantic-token DOM/ranges
+│       └── wasm-loader.js    # Shared generated-module loading
 ├── tests/                    # Node contract tests
 ├── scripts/                  # Version and asset checks
 ├── pkg/
 │   ├── core/                 # Generated numr-core WASM package
 │   └── editor/               # Generated numr-editor WASM package
-├── build.sh
 ├── Dockerfile
 └── nginx.conf
 ```

@@ -2,6 +2,7 @@ import Electrobun, {
 	ApplicationMenu,
 	BrowserView,
 	BrowserWindow,
+	Tray,
 	Utils,
 } from "electrobun/bun";
 import { fileURLToPath } from "node:url";
@@ -38,19 +39,16 @@ const rpc = BrowserView.defineRPC({
 			openExternal: ({ url }: { url: string }) => {
 				Utils.openExternal(url);
 			},
+			hideWindow: () => {
+				setWindowVisible(false);
+			},
 		},
 	},
 });
 
 ApplicationMenu.setApplicationMenu([
 	{
-		submenu: [
-			{ role: "hide" },
-			{ role: "hideOthers" },
-			{ role: "showAll" },
-			{ type: "separator" },
-			{ role: "quit" },
-		],
+		submenu: [{ role: "quit" }],
 	},
 	{
 		label: "File",
@@ -61,7 +59,7 @@ ApplicationMenu.setApplicationMenu([
 			{ type: "separator" },
 			{ label: "Publish", action: "publish-document" },
 			{ type: "separator" },
-			{ role: "close" },
+			{ label: "Hide numr", action: "hide-window", accelerator: "w" },
 		],
 	},
 	{
@@ -82,32 +80,84 @@ ApplicationMenu.setApplicationMenu([
 		label: "View",
 		submenu: [
 			{ label: "Refresh Rates", action: "refresh-rates", accelerator: "r" },
-			{ type: "separator" },
-			{ role: "toggleFullScreen" },
-		],
-	},
-	{
-		label: "Window",
-		submenu: [
-			{ role: "minimize" },
-			{ role: "zoom" },
-			{ type: "separator" },
-			{ role: "bringAllToFront" },
 		],
 	},
 ]);
+
+const isMacOS = process.platform === "darwin";
+
+if (isMacOS) {
+	Utils.setDockIconVisible(false);
+}
 
 const win = new BrowserWindow({
 	title: "numr",
 	url: "views://mainview/index.html",
 	frame: { width: 1040, height: 720, x: 120, y: 80 },
-	titleBarStyle: "hiddenInset",
-	trafficLightOffset: { x: 12, y: 12 },
+	titleBarStyle: "hidden",
+	transparent: true,
 	rpc,
 });
 
+let windowVisible = true;
+
+// TODO(desktop): Replace the temporary SF Symbols raster with a shared SVG tray icon.
+const tray = new Tray({
+	image: isMacOS
+		? "views://assets/numr-tray-sf-template.png"
+		: "views://mainview/favicon.png",
+	template: isMacOS,
+	width: 18,
+	height: 18,
+});
+
+function updateTrayMenu() {
+	tray.setMenu([
+		{
+			label: windowVisible ? "Hide numr" : "Show numr",
+			action: "toggle-window",
+		},
+		{ type: "separator" },
+		{ label: "Quit numr", action: "quit-app" },
+	]);
+}
+
+function setWindowVisible(visible: boolean) {
+	if (visible === windowVisible) {
+		if (visible) win.activate();
+		return;
+	}
+
+	if (visible) {
+		win.show();
+	} else {
+		win.hide();
+	}
+
+	windowVisible = visible;
+	updateTrayMenu();
+}
+
+tray.on("tray-clicked", (event) => {
+	const { action } = event.data as { action: string };
+
+	switch (action) {
+		case "toggle-window":
+			setWindowVisible(!windowVisible);
+			break;
+		case "quit-app":
+			Utils.quit();
+			break;
+		default:
+			break;
+	}
+});
+
+updateTrayMenu();
+
 async function openPath(path: string) {
 	const content = await Bun.file(path).text();
+	setWindowVisible(true);
 	sendOpenDocument({ content, path });
 }
 
@@ -145,6 +195,9 @@ Electrobun.events.on("application-menu-clicked", (event) => {
 		case "publish-document":
 		case "refresh-rates":
 			sendWebviewAction(event.data.action);
+			break;
+		case "hide-window":
+			setWindowVisible(false);
 			break;
 		default:
 			break;

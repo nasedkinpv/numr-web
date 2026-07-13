@@ -12,7 +12,7 @@ function initializeCore() {
 	return initialized;
 }
 
-test("generated WASM exposes the 0.7 catalog and validated rate contract", async () => {
+test("generated WASM exposes the currency catalog and validated rate contract", async () => {
 	await initializeCore();
 	const engine = new WasmEngine();
 	try {

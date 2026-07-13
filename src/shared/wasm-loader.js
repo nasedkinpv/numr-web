@@ -64,5 +64,5 @@ async function fetchWasmBinary(url) {
 
 function assetUrl(path, basePath, versionSuffix) {
 	if (basePath) return `${basePath.replace(/\/$/, "")}/${path}${versionSuffix}`;
-	return new URL(`../../${path}${versionSuffix}`, import.meta.url).href;
+	return new URL(`${path}${versionSuffix}`, import.meta.url).href;
 }

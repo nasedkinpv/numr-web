@@ -40,6 +40,12 @@ jobs:
         with:
           node-version: 22
 
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install JavaScript dependencies
+        working-directory: numr/numr-web
+        run: bun install --frozen-lockfile
+
       - name: Check JavaScript contracts
         working-directory: numr/numr-web
         run: npm run check

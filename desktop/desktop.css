@@ -1,7 +1,28 @@
+html,
+body.desktop {
+	background: transparent;
+}
+
+body.desktop {
+	overflow: hidden;
+}
+
+body.desktop .container {
+	max-width: none;
+	overflow: hidden;
+	background: var(--bg-primary);
+	border-radius: 12px;
+}
+
 body.desktop header {
 	min-height: 2.4rem;
 	padding-top: 0.55rem;
-	padding-left: 5rem;
+	padding-left: 0.75rem;
+	padding-right: 0.5rem;
+}
+
+body.desktop footer {
+	padding-right: 0.5rem;
 }
 
 body.desktop .logo,

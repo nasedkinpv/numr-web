@@ -56,4 +56,8 @@ window.addEventListener("numr-publish", (event) => {
 	electroview.rpc.send.openExternal({ url: event.detail.url });
 });
 
+document.getElementById("btn-hide")?.addEventListener("click", () => {
+	electroview.rpc.send.hideWindow({});
+});
+
 electroview.rpc.send.webviewReady();

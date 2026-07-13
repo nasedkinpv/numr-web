@@ -69,25 +69,8 @@ const wasmAssetVersion = hashFiles([
 	"pkg/editor/numr_editor_bg.wasm",
 ]);
 
-let appJs = readText("app.js");
-appJs = replaceRequired(
-	appJs,
-	/const WASM_ASSET_VERSION = ["'][^"']+["'];/,
-	`const WASM_ASSET_VERSION = "${wasmAssetVersion}";`,
-	"app.js WASM_ASSET_VERSION",
-);
-const appVersion = shortHash([Buffer.from(appJs)]);
-writeText("app.js", appJs);
-
-let calculatorJs = readText("numr-calculator.js");
-calculatorJs = replaceRequired(
-	calculatorJs,
-	/const VERSION = ["'][^"']+["'];/,
-	`const VERSION = "${wasmAssetVersion}";`,
-	"numr-calculator.js VERSION",
-);
-const calculatorVersion = shortHash([Buffer.from(calculatorJs)]);
-writeText("numr-calculator.js", calculatorJs);
+const appVersion = hashFile("app.js");
+const calculatorVersion = hashFile("numr-calculator.js");
 
 let styleCss = readText("style.css");
 styleCss = replaceRequired(

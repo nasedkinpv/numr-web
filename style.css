@@ -25,6 +25,17 @@
     --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, 'Cascadia Code', 'Consolas', 'Liberation Mono', Menlo, Monaco, monospace;
     --font-size: clamp(0.75rem, 1.2vw + 0.4rem, 0.875rem);  /* 12px-14px, fluid */
     --line-height: 1.5em;  /* Relative to font-size */
+
+    /* Shared editor contract (standalone page, component, and desktop). */
+    --numr-bg-primary: var(--bg-primary);
+    --numr-text-primary: var(--text-primary);
+    --numr-text-muted: var(--text-muted);
+    --numr-accent: var(--accent);
+    --numr-error: var(--error);
+    --numr-border: var(--border);
+    --numr-font-mono: var(--font-mono);
+    --numr-font-size: var(--font-size);
+    --numr-line-height: var(--line-height);
 }
 
 /* Reset */
@@ -183,132 +194,28 @@ header {
     opacity: 0.7;
 }
 
-/* Main: single scroll container */
-.scroll-wrapper {
-    flex: 1;
-    overflow-y: auto;                  /* Vertical scroll for all columns */
-    overflow-x: hidden;                /* No horizontal scroll on wrapper */
-    -webkit-overflow-scrolling: auto;
-    overscroll-behavior: none;
-    scrollbar-gutter: stable;
-}
-
-/* Editor grid: 3-column layout */
-.editor-grid {
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    min-height: 100%;
-}
-
-/* Gutters: line numbers (left) and results (right) */
-.gutter {
-    background: var(--bg-secondary);
-    padding: 0.5rem;
-    padding-bottom: 0;
-}
-
-#line-numbers {
-    background: var(--bg-primary);
-    border-right: 1px solid var(--border);
-    text-align: right;
-    color: var(--text-muted);
-    user-select: none;
-    font-family: var(--font-mono);
-    min-width: calc(2ch + 14px + 1rem);  /* 2 digits + error bullet + padding */
-}
-
-#results {
-    background: var(--bg-primary);
-    border-left: 1px solid var(--border);
-    text-align: right;
-    width: max-content;
-    padding-left: 1rem;
-    padding-right: 1rem;
-}
-
-/* Each line in gutter */
-.gutter .line {
-    height: var(--line-height);
-    white-space: nowrap;
-}
-
-/* Error bullet in line numbers (like VS Code linting) */
-#line-numbers .line.error {
-    color: var(--error);
-    cursor: help;
-    position: relative;
-}
-
-#line-numbers .line.error .error-bullet {
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 6px;
-    height: 6px;
-    background: var(--error);
-    border-radius: 50%;
-}
-
-#line-numbers .line.error {
-    padding-left: 10px;
-}
-
-/* Editor: CodeJar contenteditable */
+/* CodeMirror owns the only scroll surface. */
 .editor {
-    background: var(--bg-primary);
-    padding: 0.5rem;
-    padding-bottom: 0;
-    font-family: var(--font-mono);
-    font-size: var(--font-size);
-    line-height: var(--line-height);
-    tab-size: 2;
-    white-space: pre !important;        /* NO WRAP - critical for alignment */
-    word-wrap: normal !important;
-    word-break: normal !important;
-    overflow-wrap: normal !important;
-    overflow-x: auto;                   /* Horizontal scroll for long lines */
-    min-width: 0;                       /* Allow shrinking in grid for overflow to work */
-    outline: none;
-    caret-color: var(--accent);
-    cursor: text;
-    min-height: 100%;
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
 }
 
-/* Ensure CodeJar inner elements don't wrap */
-.editor * {
-    white-space: pre !important;
-}
-
-/* Selection styling */
-.editor::selection,
-.editor *::selection {
-    background: rgba(174, 159, 242, 0.25);
-}
-
-/* Focus state - no visible border, editor blends with gutters */
-.editor:focus {
-    box-shadow: none;
-}
-
-/* All columns scroll together via single scroll-wrapper - no JS sync needed */
-
-/* Token colors for syntax highlighting - warm punchy Monokai */
-.token-number { color: #b898f4; }      /* Vibrant lavender */
-.token-operator { color: #f47898; }    /* Punchy pink */
-.token-variable { color: #f4a860; }    /* Vibrant peach */
-.token-unit { color: #A8B4F4; }        /* Soft blue-lavender */
-.token-currency { color: #f4c244; }    /* Bright gold */
-.token-keyword { color: #f47898; }     /* Punchy pink */
-.token-function { color: #f4c244; }    /* Bright gold */
-.token-comment { color: #7d7868; font-style: italic; }
-.token-text { color: #f4e878; }        /* Bright yellow */
-.token-punctuation { color: #a8a498; }
+/* Footer token colors use the same classes as the editor gutters. */
+.numr-token-number { color: #b898f4; }
+.numr-token-operator, .numr-token-keyword { color: #f47898; }
+.numr-token-variable { color: #f4a860; }
+.numr-token-unit { color: #A8B4F4; }
+.numr-token-currency, .numr-token-function { color: #f4c244; }
+.numr-token-comment { color: #7d7868; font-style: italic; }
+.numr-token-text { color: #f4e878; }
+.numr-token-punctuation { color: #a8a498; }
 
 /* Footer */
 footer {
     display: flex;
-    justify-content: flex-end;
+    justify-content: flex-start;
     align-items: center;
     min-height: 2rem;
     padding: 0.25rem 0.5rem;
@@ -316,8 +223,10 @@ footer {
     background: var(--bg-secondary);
     border-top: 1px solid var(--border);
     flex-shrink: 0;
+    overflow-x: auto;
 }
 
+#totals { min-width: max-content; margin-left: auto; white-space: pre; }
 .total-label { color: var(--text-muted); }
 
 /* Scrollbar */

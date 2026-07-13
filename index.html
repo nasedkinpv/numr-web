@@ -40,23 +40,21 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=e10cd04d91" />
     <meta name="theme-color" content="#1a1a2e" />
 
-    <link rel="stylesheet" href="style.css?v=3f440e2719" />
+    <link rel="stylesheet" href="style.css?v=a5d9234d9e" />
 
     <!-- Preload critical resources -->
     <link
       rel="preload"
-      href="/pkg/core/numr_core_bg.wasm?v=6f90bf54d1"
+      href="/pkg/core/numr_core_bg.wasm?v=17c3cb2f04"
       as="fetch"
       crossorigin
     />
     <link
       rel="preload"
-      href="/pkg/editor/numr_editor_bg.wasm?v=6f90bf54d1"
+      href="/pkg/editor/numr_editor_bg.wasm?v=17c3cb2f04"
       as="fetch"
       crossorigin
     />
-    <link rel="modulepreload" href="https://esm.sh/codejar@4.3.0" />
-
     <script
       defer
       src="https://umami.beneric.studio/script.js"
@@ -115,14 +113,7 @@
         </div>
       </header>
 
-      <!-- Main editor area: single scroll container with 3-column grid -->
-      <main class="scroll-wrapper">
-        <div class="editor-grid">
-          <div class="gutter" id="line-numbers"></div>
-          <div class="editor" id="editor"></div>
-          <div class="gutter" id="results"></div>
-        </div>
-      </main>
+      <main class="editor" id="editor"></main>
 
       <!-- Footer with totals -->
       <footer>
@@ -130,6 +121,6 @@
       </footer>
     </div>
 
-    <script type="module" src="app.js?v=64691dc12a"></script>
+    <script type="module" src="app.js?v=a8ac2668c1"></script>
   </body>
 </html>
