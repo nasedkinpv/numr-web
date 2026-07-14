@@ -91,6 +91,10 @@ export class RatesService {
 			throw new Error("Rates refresh was cancelled");
 		}
 		if (!Object.keys(rates).length) {
+			const failure = [fiatResult, cryptoResult].find(
+				(result) => result.status === "rejected",
+			);
+			if (failure) throw failure.reason;
 			throw new Error("Rate providers returned no usable rates");
 		}
 

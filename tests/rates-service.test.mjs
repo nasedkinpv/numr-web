@@ -83,6 +83,17 @@ test("fails instead of caching an empty response", async () => {
 	await assert.rejects(service.refresh(), /no usable rates/);
 });
 
+test("keeps rate-limit errors concise", async () => {
+	const service = new RatesService(session(), {
+		storage: new MemoryStorage(),
+		fetchImpl: async () => response({}, { ok: false, status: 429 }),
+	});
+	await assert.rejects(
+		service.refresh(),
+		/^Error: Rate provider returned HTTP 429$/,
+	);
+});
+
 test("disposing cancels refresh before rates reach the WASM session", async () => {
 	const target = session();
 	const fetchImpl = (_url, { signal }) =>
