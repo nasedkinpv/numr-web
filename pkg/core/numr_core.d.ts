@@ -23,6 +23,11 @@ export class WasmEngine {
      * Create an engine without filesystem or network I/O.
      */
     constructor();
+    /**
+     * Set display-only decimal precision; None restores the default formatting.
+     * Existing values keep their full precision for subsequent calculations.
+     */
+    set_decimal_places(decimals?: number | null): void;
 }
 
 /**
@@ -39,6 +44,7 @@ export interface InitOutput {
     readonly wasmengine_eval_document_full: (a: number, b: number, c: number, d: number) => void;
     readonly wasmengine_get_currency_catalog: (a: number, b: number) => void;
     readonly wasmengine_new: () => number;
+    readonly wasmengine_set_decimal_places: (a: number, b: number, c: number, d: number) => void;
     readonly init: () => void;
     readonly __wbindgen_export: (a: number, b: number, c: number) => void;
     readonly __wbindgen_export2: (a: number, b: number) => number;

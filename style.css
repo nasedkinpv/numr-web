@@ -256,6 +256,22 @@ footer {
     gap: 0.25rem;
 }
 
+.footer-actions select {
+    color: var(--numr-text-muted);
+    background: var(--numr-bg-secondary);
+    border: 1px solid var(--numr-border);
+    border-radius: 7px;
+    padding: 0 0.25rem;
+    height: 1.5rem;
+    font: inherit;
+    cursor: pointer;
+}
+
+.footer-actions select:focus-visible {
+    outline: 1px solid var(--numr-accent);
+    outline-offset: 2px;
+}
+
 #totals { min-width: max-content; margin-left: auto; padding-left: 0.5rem; white-space: pre; }
 .total-label { color: var(--numr-text-muted); }
 

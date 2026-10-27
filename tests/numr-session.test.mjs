@@ -19,6 +19,21 @@ function createSession(overrides = {}, editorOverrides = {}) {
 	});
 }
 
+test("precision forwards validated values without coercion and stays per session", () => {
+	const calls = [];
+	const session = createSession({ set_decimal_places: (value) => calls.push(value) });
+	const otherCalls = [];
+	const other = createSession({ set_decimal_places: (value) => otherCalls.push(value) });
+	for (const value of [0, 4, 28, undefined]) session.setDecimalPlaces(value);
+	for (const value of [1.5, -1, 29, NaN, Infinity, "2", null]) {
+		assert.throws(() => session.setDecimalPlaces(value), RangeError);
+	}
+	assert.deepEqual(calls, [0, 4, 28, undefined]);
+	assert.deepEqual(otherCalls, []);
+	other.setDecimalPlaces(2);
+	assert.deepEqual(otherCalls, [2]);
+});
+
 test("normalizes document evaluation and totals", () => {
 	const session = createSession();
 	assert.deepEqual(session.evaluateDocument("1+1"), {

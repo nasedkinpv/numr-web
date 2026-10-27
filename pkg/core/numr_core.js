@@ -88,6 +88,24 @@ export class WasmEngine {
         WasmEngineFinalization.register(this, this.__wbg_ptr, this);
         return this;
     }
+    /**
+     * Set display-only decimal precision; None restores the default formatting.
+     * Existing values keep their full precision for subsequent calculations.
+     * @param {number | null} [decimals]
+     */
+    set_decimal_places(decimals) {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            wasm.wasmengine_set_decimal_places(retptr, this.__wbg_ptr, !isLikeNone(decimals), isLikeNone(decimals) ? 0 : decimals);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            if (r1) {
+                throw takeObject(r0);
+            }
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
+    }
 }
 if (Symbol.dispose) WasmEngine.prototype[Symbol.dispose] = WasmEngine.prototype.free;
 
@@ -185,6 +203,10 @@ let heap = new Array(1024).fill(undefined);
 heap.push(undefined, null, true, false);
 
 let heap_next = heap.length;
+
+function isLikeNone(x) {
+    return x === undefined || x === null;
+}
 
 function passStringToWasm0(arg, malloc, realloc) {
     if (realloc === undefined) {

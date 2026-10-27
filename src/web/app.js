@@ -20,6 +20,7 @@ import {
 } from "../shared/share-codec.js";
 import { safeStorage, STORAGE_KEYS } from "../shared/storage.js";
 import { renderTokenTotals } from "../shared/token-view.js";
+import { loadDecimalPlaces, parseDecimalPlaces, saveDecimalPlaces } from "../shared/decimal-places.js";
 
 // ============================================================================
 // Constants
@@ -78,6 +79,7 @@ const $ = {
 	btnRates: null,
 	btnWrap: null,
 	btnLineNumbers: null,
+	decimalPlaces: null,
 	btnShare: null,
 	btnNew: null,
 	btnSave: null,
@@ -152,6 +154,7 @@ async function init() {
 	$.btnRates = document.getElementById("btn-rates");
 	$.btnWrap = document.getElementById("btn-wrap");
 	$.btnLineNumbers = document.getElementById("btn-line-numbers");
+	$.decimalPlaces = document.getElementById("decimal-places");
 	$.btnShare = document.getElementById("btn-share");
 	$.btnNew = document.getElementById("btn-new");
 	$.btnSave = document.getElementById("btn-save");
@@ -178,6 +181,14 @@ async function init() {
 	const storedLineNumbers = safeStorage.getItem(STORAGE_KEYS.lineNumbers);
 	const showLineNumbers =
 		storedLineNumbers === null || storedLineNumbers === "true";
+	const decimalPlaces = loadDecimalPlaces();
+	session.setDecimalPlaces(decimalPlaces);
+	if ($.decimalPlaces) {
+		for (let value = 0; value <= 28; value++) {
+			$.decimalPlaces.add(new Option(String(value), String(value)));
+		}
+		$.decimalPlaces.value = decimalPlaces === undefined ? "" : String(decimalPlaces);
+	}
 	editor = new NumrEditor({
 		parent: $.editorHost,
 		session,
@@ -201,6 +212,16 @@ async function init() {
 // ============================================================================
 
 function setupEventListeners() {
+	$.decimalPlaces?.addEventListener("change", () => {
+		try {
+			const value = parseDecimalPlaces($.decimalPlaces.value);
+			session.setDecimalPlaces(value);
+			saveDecimalPlaces(value);
+			editor.evaluateNow();
+		} catch (error) {
+			console.warn("Invalid decimal places:", error);
+		}
+	});
 	$.btnWrap?.addEventListener("click", toggleLineWrapping);
 	$.btnLineNumbers?.addEventListener("click", toggleLineNumbers);
 	$.btnRates.addEventListener("click", () => {

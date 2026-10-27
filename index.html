@@ -46,18 +46,18 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=8dec8a78b0" />
     <meta name="theme-color" content="#1a1c1e" />
 
-    <link rel="stylesheet" href="style.css?v=06f5b4e13b" />
+    <link rel="stylesheet" href="style.css?v=0e444faca6" />
 
     <!-- Preload critical resources -->
     <link
       rel="preload"
-      href="/pkg/core/numr_core_bg.wasm?v=9fca8ce5cb"
+      href="/pkg/core/numr_core_bg.wasm?v=4ef31b75bd"
       as="fetch"
       crossorigin
     />
     <link
       rel="preload"
-      href="/pkg/editor/numr_editor_bg.wasm?v=9fca8ce5cb"
+      href="/pkg/editor/numr_editor_bg.wasm?v=4ef31b75bd"
       as="fetch"
       crossorigin
     />
@@ -132,11 +132,14 @@
               <path d="M16 8h5V3" />
             </svg>
           </button>
+          <select id="decimal-places" aria-label="Decimal places" title="Decimal places (display only)">
+            <option value="">Auto</option>
+          </select>
         </div>
         <div id="totals"></div>
       </footer>
     </div>
 
-    <script type="module" src="app.js?v=266076fd9f"></script>
+    <script type="module" src="app.js?v=5c46998a5c"></script>
   </body>
 </html>

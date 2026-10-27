@@ -130,6 +130,8 @@ test("editor view toggles stay connected across public surfaces", async () => {
 			/id="btn-line-numbers"[\s\S]*id="btn-wrap"[\s\S]*id="btn-rates"/,
 		);
 		assert.match(markup, /numr-wordmark\.svg/);
+		assert.match(footer, /id="decimal-places"[^>]*aria-label="Decimal places"/);
+		assert.match(footer, /<option value="">Auto<\/option>/);
 	}
 	for (const id of ["btn-share", "btn-new", "btn-save", "btn-wrap", "btn-rates"]) {
 		assert.equal(buttonContent(desktop, id), buttonContent(index, id));

@@ -10,6 +10,7 @@ import { NumrSession } from "../shared/numr-session.js";
 import { RatesService } from "../shared/rates-service.js";
 import { safeStorage, STORAGE_KEYS } from "../shared/storage.js";
 import { renderTokenTotals } from "../shared/token-view.js";
+import { parseDecimalPlaces, validateDecimalPlaces } from "../shared/decimal-places.js";
 
 const VERSION = __NUMR_ASSET_VERSION__;
 const DEFAULT_CONTENT = `# Quick calculations
@@ -148,6 +149,7 @@ export class NumrCalculator extends HTMLElement {
 		"autosave",
 		"storage-key",
 		"base-path",
+		"decimal-places",
 	];
 
 	constructor() {
@@ -186,7 +188,24 @@ export class NumrCalculator extends HTMLElement {
 		this.setAttribute("base-path", String(value || ""));
 	}
 
+	get decimalPlaces() {
+		return parseDecimalPlaces(this.getAttribute("decimal-places"));
+	}
+
+	set decimalPlaces(value) {
+		validateDecimalPlaces(value);
+		if (value === undefined) this.removeAttribute("decimal-places");
+		else this.setAttribute("decimal-places", String(value));
+	}
+
 	connectedCallback() {
+		// Replay properties assigned before registration through the accessor.
+		// Reflect only after construction, and before asynchronous initialization.
+		if (Object.hasOwn(this, "decimalPlaces")) {
+			const value = this.decimalPlaces;
+			delete this.decimalPlaces;
+			this.decimalPlaces = value;
+		}
 		this._renderLoading();
 		this._initialize(++this._generation);
 	}
@@ -201,7 +220,21 @@ export class NumrCalculator extends HTMLElement {
 	attributeChangedCallback(name, oldValue, newValue) {
 		if (oldValue === newValue) return;
 
-		if (name === "content" && this._editor) {
+		if (name === "decimal-places") {
+			let value;
+			try {
+				value = parseDecimalPlaces(newValue);
+			} catch (error) {
+				// Attribute callbacks cannot propagate exceptions to setAttribute callers.
+				// Restore the last valid value rather than silently truncating/clamping.
+				if (oldValue === null) this.removeAttribute(name);
+				else this.setAttribute(name, oldValue);
+				console.warn("numr-calculator: Invalid decimal-places", error);
+				return;
+			}
+			this._session?.setDecimalPlaces(value);
+			this._editor?.evaluateNow();
+		} else if (name === "content" && this._editor) {
 			this._editor.setContent(newValue || "");
 		} else if (name === "readonly") {
 			this._editor?.setReadOnly(this.readonly);
@@ -240,6 +273,7 @@ export class NumrCalculator extends HTMLElement {
 				return;
 			}
 
+			session.setDecimalPlaces(this.decimalPlaces);
 			this._session = session;
 			this._ratesService = new RatesService(session);
 			this._renderReady();

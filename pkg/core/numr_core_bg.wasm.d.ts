@@ -6,6 +6,7 @@ export const wasmengine_apply_rates: (a: number, b: number, c: number, d: number
 export const wasmengine_eval_document_full: (a: number, b: number, c: number, d: number) => void;
 export const wasmengine_get_currency_catalog: (a: number, b: number) => void;
 export const wasmengine_new: () => number;
+export const wasmengine_set_decimal_places: (a: number, b: number, c: number, d: number) => void;
 export const init: () => void;
 export const __wbindgen_export: (a: number, b: number, c: number) => void;
 export const __wbindgen_export2: (a: number, b: number) => number;

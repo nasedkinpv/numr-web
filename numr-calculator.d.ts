@@ -33,6 +33,9 @@ export class NumrCalculator extends HTMLElement {
   /** Wrap long editor lines */
   wrap: boolean;
 
+  /** Display precision, integer 0..28; undefined restores automatic formatting. Invalid assignments throw RangeError. */
+  decimalPlaces: number | undefined;
+
   /** Skip fetching exchange rates */
   norates: boolean;
 

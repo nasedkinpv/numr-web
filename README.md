@@ -31,7 +31,7 @@ The web and desktop interface for [numr](https://github.com/nasedkinpv/numr), po
 Use `<numr-calculator>` on any page:
 
 ```html
-<script type="module" src="https://numr.cc/numr-calculator.js?v=0e0b64d72d"></script>
+<script type="module" src="https://numr.cc/numr-calculator.js?v=22ca15bfcb"></script>
 
 <numr-calculator autosave></numr-calculator>
 ```
@@ -46,6 +46,7 @@ The package is self-contained: keep `numr-calculator.js`, `pkg/core`, and `pkg/e
 | `minimal` | Hide the header and footer |
 | `readonly` | Make the editor non-editable |
 | `wrap` | Wrap long editor lines |
+| `decimal-places` | Display precision, integer `0`–`28`; omit (or use an empty value) for automatic legacy formatting |
 | `norates` | Skip cached and network exchange-rate loading |
 | `autosave` | Persist the document to `localStorage` |
 | `storage-key` | Override the autosave key |
@@ -61,7 +62,13 @@ calculator.setContent("price = $100\n+ 20%");
 calculator.clear();
 calculator.refreshRates();
 calculator.focus();
+calculator.decimalPlaces = 4;         // re-evaluate without editing the document
+calculator.decimalPlaces = undefined; // restore automatic formatting
 ```
+
+The `decimalPlaces` property accepts only integer numbers from 0 to 28 or `undefined`; invalid assignments throw `RangeError`. Invalid `decimal-places` attributes are rejected with a console warning and the previous valid attribute is restored. Precision is local to each component and is not loaded from or saved to the standalone app preference. It changes display rounding only, not stored arithmetic, content, selection, or undo history.
+
+The web and desktop footer provides the same precision setting (`Auto` restores the original value-specific formatting). This preference persists independently of the document; resetting it removes the saved override. Corrupt or unavailable storage falls back to `Auto`.
 
 The component emits:
 

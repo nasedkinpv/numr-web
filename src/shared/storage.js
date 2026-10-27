@@ -2,6 +2,7 @@ export const STORAGE_KEYS = Object.freeze({
 	document: "numr-document",
 	lineWrapping: "numr-line-wrapping",
 	lineNumbers: "numr-line-numbers",
+	decimalPlaces: "numr-decimal-places",
 	rates: "numr-rates",
 	ratesTimestamp: "numr-rates-timestamp",
 });
@@ -17,6 +18,16 @@ export function createSafeStorage(storage) {
 	}
 
 	return Object.freeze({
+		removeItem(key) {
+			try {
+				const target = resolve();
+				if (!target) return false;
+				target.removeItem(String(key));
+				return true;
+			} catch {
+				return false;
+			}
+		},
 		getItem(key) {
 			try {
 				const value = resolve()?.getItem(String(key));

@@ -1,4 +1,5 @@
 import { loadNumrWasm } from "./wasm-loader.js";
+import { validateDecimalPlaces } from "./decimal-places.js";
 
 /**
  * Stable JavaScript boundary around the generated WASM APIs.
@@ -35,6 +36,10 @@ export class NumrSession {
 		);
 		this.variableNames = document.variable_names || "";
 		return { results: document.results, totals: document.totals };
+	}
+
+	setDecimalPlaces(value) {
+		this.engine.set_decimal_places(validateDecimalPlaces(value));
 	}
 
 	getVariableNames() {

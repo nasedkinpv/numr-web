@@ -2,7 +2,7 @@
   "name": "numr-core",
   "type": "module",
   "description": "Core calculation engine for numr - expression parsing, evaluation, and unit handling",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "license": "MIT",
   "repository": {
     "type": "git",

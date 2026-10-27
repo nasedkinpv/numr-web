@@ -115,7 +115,7 @@ test("blocked Web Storage does not prevent startup", async ({ page }) => {
 	page.on("pageerror", (error) => pageErrors.push(error.message));
 	await blockExternalRequests(page);
 	await page.addInitScript(() => {
-		for (const method of ["getItem", "setItem"]) {
+		for (const method of ["getItem", "setItem", "removeItem"]) {
 			Object.defineProperty(Storage.prototype, method, {
 				configurable: true,
 				value() {
@@ -127,5 +127,11 @@ test("blocked Web Storage does not prevent startup", async ({ page }) => {
 
 	await page.goto("/");
 	await expect(page.locator(".cm-editor")).toBeVisible();
+	await setDocument(page, "1 / 3");
+	const precision = page.getByRole("combobox", { name: "Decimal places" });
+	await precision.selectOption("4");
+	await expect(page.locator(".numr-result[data-numr-result-anchor]")).toHaveText("0.3333");
+	await precision.selectOption("");
+	await expect(page.locator(".numr-result[data-numr-result-anchor]")).toHaveText("0.33");
 	expect(pageErrors).toEqual([]);
 });
