@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { NumrSession } from "../src/shared/numr-session.js";
 import init, { WasmEngine } from "../pkg/core/numr_core.js";
 import initEditor, {
 	expressionPrefixUtf16Len,
@@ -23,6 +24,61 @@ function initializeEditor() {
 	).then((module_or_path) => initEditor({ module_or_path }));
 	return editorInitialized;
 }
+
+test("generated WASM rounds stored values with midpoint-even ties and bounded precision", async () => {
+	await initializeCore();
+	const engine = new WasmEngine();
+	try {
+		engine.set_decimal_places(4);
+		const content = [
+			"rounded = round(1.234567, 4)",
+			"rounded * 10000",
+			"round(1.245, 2)",
+			"round(1.255, 2)",
+			"round(-1.245, 2)",
+			"round(-1.255, 2)",
+			"round(2.5, 0)",
+			"round(3.5, 0)",
+			"round(2.5)",
+		].join("\n");
+		const document = JSON.parse(engine.eval_document_full(content));
+		assert.deepEqual(document.results.map(({ result }) => result), [
+			"1.2346", "12346", "1.2400", "1.2600", "-1.2400", "-1.2600", "2", "4", "2",
+		]);
+		assert.ok(document.results.every(({ is_error }) => !is_error));
+		for (const precision of ["-1", "1.5", "29"]) {
+			const invalid = JSON.parse(engine.eval_document_full(`round(1.23, ${precision})`)).results[0];
+			assert.equal(invalid.is_error, true);
+			assert.equal(invalid.result, "Error: round precision must be an integer between 0 and 28");
+		}
+		engine.set_decimal_places(28);
+		assert.equal(JSON.parse(engine.eval_document_full("round(1.234567, 28)")).results[0].result, `1.234567${"0".repeat(22)}`);
+	} finally {
+		engine.free();
+	}
+});
+
+test("real WASM session preserves rounded arithmetic independently of display precision", async () => {
+	await initializeCore();
+	await initializeEditor();
+	const session = new NumrSession({ engine: new WasmEngine(), tokenize });
+	try {
+		const content = "rounded = round(1.234567, 4)\nrounded * 10000";
+		for (const [precision, expected] of [[2, "1.23"], [4, "1.2346"]]) {
+			session.setDecimalPlaces(precision);
+			const document = session.evaluateDocument(content);
+			assert.deepEqual(document.results.map(({ result }) => result), [expected, "12346"]);
+			assert.ok(document.results.every(({ is_error }) => !is_error));
+			assert.equal(session.getVariableNames(), "rounded");
+		}
+		const invalid = session.evaluateDocument("round(1.23, 29)");
+		assert.equal(invalid.results[0].is_error, true);
+		assert.match(invalid.results[0].result, /round precision must be an integer between 0 and 28/);
+		assert.equal(session.evaluateDocument("round(1.255, 2)").results[0].result, "1.2600");
+	} finally {
+		session.dispose();
+	}
+});
 
 test("generated editor WASM anchors results before trailing comments", async () => {
 	await initializeEditor();

@@ -4,7 +4,7 @@ export default {
 	app: {
 		name: "numr",
 		identifier: "cc.numr.desktop",
-		version: "0.9.0",
+		version: "0.9.1",
 		fileAssociations: [
 			{
 				name: "numr document",
