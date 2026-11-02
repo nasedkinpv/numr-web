@@ -4,6 +4,12 @@ import { expect, test } from "@playwright/test";
 
 const KEY = "numr-decimal-places";
 
+async function precisionControl(page) {
+	const control = page.getByRole("spinbutton", { name: "Decimal places" });
+	if (!(await control.isVisible())) await page.locator("#btn-settings").click();
+	return control;
+}
+
 async function blockExternalRequests(page) {
 	await page.route(/^https:\/\//, (route) => route.abort());
 }
@@ -28,18 +34,18 @@ for (const surface of ["web", "desktop"]) {
 		await page.goto(`/${hash}`);
 		await expect(page.locator(".cm-content")).toHaveText(content);
 		await expect(page.locator("#totals")).toContainText("$12.35");
-		const control = page.getByRole("combobox", { name: "Decimal places" });
+		const control = await precisionControl(page);
 		await expect(control).toHaveValue("");
-		await control.selectOption("4");
+		await control.fill("4");
 		await expect(page.locator(".numr-result[data-numr-result-anchor]")).toHaveText("$12.3457");
 		await expect(page.locator("#totals")).toContainText("$12.3457");
 		await expect(page.locator(".cm-content")).toHaveText(content);
 		expect(new URL(page.url()).hash).toBe(hash);
 		expect(await page.evaluate(() => localStorage.getItem("numr-document"))).toBe("local original");
 		expect(await page.evaluate((key) => localStorage.getItem(key), KEY)).toBe("4");
-		await control.selectOption("0");
+		await control.fill("0");
 		await expect(page.locator("#totals")).toContainText("$12");
-		await control.selectOption("");
+		await control.fill("");
 		await expect(page.locator("#totals")).toContainText("$12.35");
 		expect(await page.evaluate((key) => localStorage.getItem(key), KEY)).toBe(null);
 	});
@@ -49,16 +55,18 @@ test("precision persists across reload, including zero and maximum; reset remove
 	await blockExternalRequests(page);
 	await page.goto("/");
 	await page.locator(".cm-content").fill("1 / 3");
-	const control = page.getByRole("combobox", { name: "Decimal places" });
+	let control = await precisionControl(page);
 	for (const value of ["0", "28"]) {
-		await control.selectOption(value);
+		await control.fill(value);
 		await page.reload();
+		control = await precisionControl(page);
 		await expect(control).toHaveValue(value);
 		await expect(page.locator(".cm-content")).toHaveText("1 / 3");
 		await expect(page.locator(".numr-result[data-numr-result-anchor]")).toHaveText(value === "0" ? "0" : `0.${"3".repeat(28)}`);
 	}
-	await control.selectOption("");
+	await control.fill("");
 	await page.reload();
+	control = await precisionControl(page);
 	await expect(control).toHaveValue("");
 	await expect(page.locator(".numr-result[data-numr-result-anchor]")).toHaveText("0.33");
 	expect(await page.evaluate((key) => localStorage.getItem(key), KEY)).toBe(null);
@@ -73,7 +81,7 @@ test("corrupt precision preferences do not break startup or coerce invalid input
 			localStorage.setItem("numr-document", "$12.34567");
 		}, { key: KEY, value });
 		await page.reload();
-		await expect(page.getByRole("combobox", { name: "Decimal places" })).toHaveValue("");
+		await expect(await precisionControl(page)).toHaveValue("");
 		await expect(page.locator(".numr-result[data-numr-result-anchor]")).toHaveText("$12.35");
 	}
 });

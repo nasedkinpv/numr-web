@@ -31,12 +31,6 @@
     "stamp:assets": "node scripts/stamp-asset-versions.mjs",
     "build:frontend": "npm run build:browser && npm run stamp:assets",
     "build": "npm run clean && npm run build:wasm && npm run build:frontend && npm run check:versions",
-    "desktop:prepare": "npm run build",
-    "desktop:check": "npm run build:browser && bun build src/bun/index.ts --target=bun --external electrobun/bun --outdir build/check/bun && bun build src/mainview/index.ts --target=browser --external electrobun/view --outdir build/check/view",
-    "desktop:dev": "npm run desktop:check && electrobun dev",
-    "desktop:dev:fresh": "npm run desktop:prepare && npm run desktop:dev",
-    "desktop:build": "npm run desktop:prepare && npm run desktop:check && electrobun build --env=stable",
-    "desktop:build:quick": "npm run desktop:check && electrobun build --env=stable",
     "serve": "python3 -m http.server 8080",
     "start": "npm run build && npm run serve"
   },
@@ -54,11 +48,10 @@
     "url": "https://github.com/nasedkinpv/numr-web"
   },
   "devDependencies": {
-    "@codemirror/commands": "^6.10.4",
-    "@codemirror/state": "^6.7.1",
-    "@codemirror/view": "^6.43.6",
-    "@playwright/test": "^1.61.0",
-    "@types/bun": "latest",
-    "electrobun": "^1.18.1"
+    "@codemirror/commands": "^6.11.1",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.15",
+    "@playwright/test": "^1.64.1",
+    "@types/bun": "^1.3.14"
   }
 }

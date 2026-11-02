@@ -41,16 +41,15 @@ test("document, empty state, unload, and view settings survive reload", async ({
 	await page.reload();
 	await expect(page.locator(".cm-content")).toHaveText("persisted = 42");
 
-	await page.locator("#btn-line-numbers").click();
-	await page.locator("#btn-wrap").click();
+	await page.locator("#btn-settings").click();
+	await page.locator("#setting-line-numbers").click();
+	await page.locator("#setting-wrap").click();
 	await expect.poll(() => stored(page, LINE_NUMBERS_KEY)).toBe("false");
 	await expect.poll(() => stored(page, WRAP_KEY)).toBe("false");
 	await page.reload();
-	await expect(page.locator("#btn-line-numbers")).toHaveAttribute(
-		"aria-pressed",
-		"false",
-	);
-	await expect(page.locator("#btn-wrap")).toHaveAttribute("aria-pressed", "false");
+	await page.locator("#btn-settings").click();
+	await expect(page.locator("#setting-line-numbers")).not.toBeChecked();
+	await expect(page.locator("#setting-wrap")).not.toBeChecked();
 
 	await setDocument(page, "immediate reload");
 	await page.reload();
@@ -128,10 +127,11 @@ test("blocked Web Storage does not prevent startup", async ({ page }) => {
 	await page.goto("/");
 	await expect(page.locator(".cm-editor")).toBeVisible();
 	await setDocument(page, "1 / 3");
-	const precision = page.getByRole("combobox", { name: "Decimal places" });
-	await precision.selectOption("4");
+	await page.locator("#btn-settings").click();
+	const precision = page.getByRole("spinbutton", { name: "Decimal places" });
+	await precision.fill("4");
 	await expect(page.locator(".numr-result[data-numr-result-anchor]")).toHaveText("0.3333");
-	await precision.selectOption("");
+	await precision.fill("");
 	await expect(page.locator(".numr-result[data-numr-result-anchor]")).toHaveText("0.33");
 	expect(pageErrors).toEqual([]);
 });

@@ -5,20 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>numr</title>
     <meta name="theme-color" content="#1a1c1e" />
-    <link rel="icon" type="image/x-icon" href="favicon.ico" sizes="16x16 32x32 48x48" />
-    <link rel="icon" type="image/png" sizes="32x32" href="favicon.png" />
-    <link rel="icon" type="image/svg+xml" sizes="any" href="favicon.svg" />
-    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
     <link rel="stylesheet" href="style.css" />
     <link rel="stylesheet" href="desktop.css" />
   </head>
   <body class="desktop">
     <div class="container">
-      <header class="electrobun-webkit-app-region-drag">
-        <div class="logo">
-          <img src="numr-wordmark.svg" alt="numr" draggable="false" />
+      <header data-tauri-drag-region>
+        <div class="logo" data-tauri-drag-region>
+          <img src="numr-wordmark.svg" alt="numr" draggable="false" data-tauri-drag-region />
         </div>
-        <div class="actions electrobun-webkit-app-region-no-drag">
+        <div class="actions">
           <button id="btn-share" title="Share document link" aria-label="Share document link">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="18" cy="5" r="3" />
@@ -53,12 +49,10 @@
 
       <footer>
         <div class="footer-actions">
-          <button id="btn-line-numbers" class="active" title="Hide line numbers" aria-label="Hide line numbers" aria-pressed="true"><span aria-hidden="true">#</span></button>
-          <button id="btn-wrap" class="active" title="Disable line wrapping" aria-label="Disable line wrapping" aria-pressed="true">
+          <button id="btn-settings" popovertarget="settings" title="Settings" aria-label="Settings">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3 6h13a4 4 0 0 1 0 8H9" />
-              <path d="m12 11-3 3 3 3" />
-              <path d="M3 18h6" />
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+              <circle cx="12" cy="12" r="3" />
             </svg>
           </button>
           <button id="btn-rates" title="Refresh exchange rates" aria-label="Refresh exchange rates">
@@ -69,9 +63,20 @@
               <path d="M16 8h5V3" />
             </svg>
           </button>
-          <select id="decimal-places" aria-label="Decimal places" title="Decimal places (display only)">
-            <option value="">Auto</option>
-          </select>
+          <div id="settings" popover>
+            <label class="setting">
+              <span>Line numbers</span>
+              <input id="setting-line-numbers" type="checkbox" role="switch" />
+            </label>
+            <label class="setting">
+              <span>Wrap lines</span>
+              <input id="setting-wrap" type="checkbox" role="switch" />
+            </label>
+            <label class="setting">
+              <span>Decimal places</span>
+              <input id="decimal-places" type="number" min="0" max="28" step="1" inputmode="numeric" placeholder="Auto" title="Display precision; empty keeps each value's own formatting" />
+            </label>
+          </div>
         </div>
         <div id="totals"></div>
       </footer>

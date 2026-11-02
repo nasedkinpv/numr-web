@@ -77,8 +77,8 @@ const $ = {
 	editorHost: null,
 	totals: null,
 	btnRates: null,
-	btnWrap: null,
-	btnLineNumbers: null,
+	lineWrapping: null,
+	lineNumbers: null,
 	decimalPlaces: null,
 	btnShare: null,
 	btnNew: null,
@@ -152,8 +152,8 @@ async function init() {
 	$.editorHost = document.getElementById("editor");
 	$.totals = document.getElementById("totals");
 	$.btnRates = document.getElementById("btn-rates");
-	$.btnWrap = document.getElementById("btn-wrap");
-	$.btnLineNumbers = document.getElementById("btn-line-numbers");
+	$.lineWrapping = document.getElementById("setting-wrap");
+	$.lineNumbers = document.getElementById("setting-line-numbers");
 	$.decimalPlaces = document.getElementById("decimal-places");
 	$.btnShare = document.getElementById("btn-share");
 	$.btnNew = document.getElementById("btn-new");
@@ -184,9 +184,6 @@ async function init() {
 	const decimalPlaces = loadDecimalPlaces();
 	session.setDecimalPlaces(decimalPlaces);
 	if ($.decimalPlaces) {
-		for (let value = 0; value <= 28; value++) {
-			$.decimalPlaces.add(new Option(String(value), String(value)));
-		}
 		$.decimalPlaces.value = decimalPlaces === undefined ? "" : String(decimalPlaces);
 	}
 	editor = new NumrEditor({
@@ -212,7 +209,7 @@ async function init() {
 // ============================================================================
 
 function setupEventListeners() {
-	$.decimalPlaces?.addEventListener("change", () => {
+	$.decimalPlaces?.addEventListener("input", () => {
 		try {
 			const value = parseDecimalPlaces($.decimalPlaces.value);
 			session.setDecimalPlaces(value);
@@ -222,8 +219,8 @@ function setupEventListeners() {
 			console.warn("Invalid decimal places:", error);
 		}
 	});
-	$.btnWrap?.addEventListener("click", toggleLineWrapping);
-	$.btnLineNumbers?.addEventListener("click", toggleLineNumbers);
+	$.lineWrapping?.addEventListener("change", () => setLineWrapping($.lineWrapping.checked));
+	$.lineNumbers?.addEventListener("change", () => setLineNumbers($.lineNumbers.checked));
 	$.btnRates.addEventListener("click", () => {
 		if (rateStatus !== "loading") fetchRates("manual");
 	});
@@ -259,8 +256,12 @@ function handleEvaluation({ totals }) {
 }
 
 function toggleLineWrapping() {
+	if (editor) setLineWrapping(!editor.lineWrapping);
+}
+
+function setLineWrapping(enabled) {
 	if (!editor) return;
-	editor.setLineWrapping(!editor.lineWrapping);
+	editor.setLineWrapping(enabled);
 	safeStorage.setItem(
 		STORAGE_KEYS.lineWrapping,
 		String(editor.lineWrapping),
@@ -269,18 +270,16 @@ function toggleLineWrapping() {
 }
 
 function updateLineWrappingControl() {
-	if (!$.btnWrap || !editor) return;
-	const enabled = editor.lineWrapping;
-	const label = enabled ? "Disable line wrapping" : "Wrap long lines";
-	$.btnWrap.classList.toggle("active", enabled);
-	$.btnWrap.setAttribute("aria-pressed", String(enabled));
-	$.btnWrap.setAttribute("aria-label", label);
-	$.btnWrap.title = label;
+	if ($.lineWrapping && editor) $.lineWrapping.checked = editor.lineWrapping;
 }
 
 function toggleLineNumbers() {
+	if (editor) setLineNumbers(!editor.showLineNumbers);
+}
+
+function setLineNumbers(enabled) {
 	if (!editor) return;
-	editor.setLineNumbers(!editor.showLineNumbers);
+	editor.setLineNumbers(enabled);
 	safeStorage.setItem(
 		STORAGE_KEYS.lineNumbers,
 		String(editor.showLineNumbers),
@@ -289,13 +288,7 @@ function toggleLineNumbers() {
 }
 
 function updateLineNumbersControl() {
-	if (!$.btnLineNumbers || !editor) return;
-	const enabled = editor.showLineNumbers;
-	const label = enabled ? "Hide line numbers" : "Show line numbers";
-	$.btnLineNumbers.classList.toggle("active", enabled);
-	$.btnLineNumbers.setAttribute("aria-pressed", String(enabled));
-	$.btnLineNumbers.setAttribute("aria-label", label);
-	$.btnLineNumbers.title = label;
+	if ($.lineNumbers && editor) $.lineNumbers.checked = editor.showLineNumbers;
 }
 
 // ============================================================================
@@ -319,6 +312,11 @@ function newDocument() {
 
 function saveFile() {
 	const content = editor.getContent();
+	if (typeof window.numrSaveDocument === "function") {
+		window.numrSaveDocument(content);
+		trackEvent("File Downloaded");
+		return;
+	}
 	const blob = new Blob([content], { type: "text/plain" });
 	const url = URL.createObjectURL(blob);
 
@@ -428,7 +426,7 @@ function getShareUrl() {
 }
 
 function buildShareUrl(hashPayload) {
-	if (location.protocol === "views:") {
+	if ("__TAURI__" in window) {
 		return `https://numr.cc/#${hashPayload}`;
 	}
 	return `${window.location.origin}${window.location.pathname}${window.location.search}#${hashPayload}`;
@@ -610,4 +608,4 @@ window.addEventListener("beforeunload", () => {
 // Start
 // ============================================================================
 
-init();
+window.numrReady = init();

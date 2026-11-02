@@ -136,47 +136,33 @@ test("results follow the executable row across wrap, resize, and gutter toggles"
 	expect(wrapped.commentDelta).toBeGreaterThan(0);
 	expect(wrapped.lineRows).toBeGreaterThan(wrapped.expressionRow + 1);
 
-	const wrapButton = page.locator("#btn-wrap");
-	await expect(wrapButton).toHaveAccessibleName("Disable line wrapping");
-	await page.locator(".cm-content").hover();
-	const activeStyle = await wrapButton.evaluate((button) => {
-		const style = getComputedStyle(button);
-		return { color: style.color, background: style.backgroundColor };
-	});
-	await wrapButton.click();
-	await expect(wrapButton).toHaveAttribute("aria-pressed", "false");
-	await expect(wrapButton).toHaveAccessibleName("Wrap long lines");
+	await page.locator("#btn-settings").click();
+	const wrapSwitch = page.locator("#setting-wrap");
+	await expect(wrapSwitch).toBeChecked();
+	const activeStyle = await wrapSwitch.evaluate((el) => getComputedStyle(el).backgroundColor);
+	await wrapSwitch.click();
+	await expect(wrapSwitch).not.toBeChecked();
 	await page.waitForTimeout(150);
-	const hoverStyle = await wrapButton.evaluate((button) => {
-		const style = getComputedStyle(button);
-		return { color: style.color, background: style.backgroundColor };
-	});
-	await page.locator(".cm-content").hover();
-	const inactiveStyle = await wrapButton.evaluate((button) => {
-		const style = getComputedStyle(button);
-		return { color: style.color, background: style.backgroundColor };
-	});
-	expect(activeStyle.background).not.toBe(inactiveStyle.background);
-	expect(hoverStyle.color).not.toBe(inactiveStyle.color);
-	expect(hoverStyle).not.toEqual(activeStyle);
+	const inactiveStyle = await wrapSwitch.evaluate((el) => getComputedStyle(el).backgroundColor);
+	expect(activeStyle).not.toBe(inactiveStyle);
 	await expectAligned(page);
 	const unwrapped = await readLayout(page);
 	expect(unwrapped.expressionRow).toBe(0);
 	expect(unwrapped.lineRows).toBe(1);
 
-	await wrapButton.click();
-	await expect(wrapButton).toHaveAccessibleName("Disable line wrapping");
+	await wrapSwitch.click();
+	await expect(wrapSwitch).toBeChecked();
 	await expectAligned(page);
 
 	const lineNumbers = page.locator(".numr-line-numbers");
 	await expect(lineNumbers).toBeVisible();
-	const lineNumbersButton = page.locator("#btn-line-numbers");
-	await expect(lineNumbersButton).toHaveAccessibleName("Hide line numbers");
-	await lineNumbersButton.click();
+	const lineNumbersSwitch = page.locator("#setting-line-numbers");
+	await expect(lineNumbersSwitch).toBeChecked();
+	await lineNumbersSwitch.click();
 	await expect(lineNumbers).toBeHidden();
-	await expect(lineNumbersButton).toHaveAccessibleName("Show line numbers");
+	await expect(lineNumbersSwitch).not.toBeChecked();
 	await expectAligned(page);
-	await lineNumbersButton.click();
+	await lineNumbersSwitch.click();
 	await expect(lineNumbers).toBeVisible();
 	await expectAligned(page);
 
@@ -204,9 +190,10 @@ test("line-number toggles keep every wrapped result row aligned", async ({
 		MULTILINE_EXPRESSIONS.map(() => 0),
 	);
 
-	const lineNumbersButton = page.locator("#btn-line-numbers");
+	await page.locator("#btn-settings").click();
+	const lineNumbersSwitch = page.locator("#setting-line-numbers");
 	for (let click = 0; click < 3; click += 1) {
-		await lineNumbersButton.click();
+		await lineNumbersSwitch.click();
 		await settleLayout(page);
 		expect(await readAlignmentDeltas(page)).toEqual(
 			MULTILINE_EXPRESSIONS.map(() => 0),

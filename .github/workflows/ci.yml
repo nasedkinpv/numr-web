@@ -62,10 +62,6 @@ jobs:
         working-directory: numr/numr-web
         run: npm run build
 
-      - name: Check desktop entrypoints
-        working-directory: numr/numr-web
-        run: npm run desktop:check
-
       - name: Verify rebuilt WASM contracts
         working-directory: numr/numr-web
         run: npm run check

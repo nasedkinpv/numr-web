@@ -1,7 +1,7 @@
 const cache = new Map();
 
 export async function loadNumrWasm({ basePath = "", version = "" } = {}) {
-	const isDesktop = location.protocol === "views:";
+	const isDesktop = "__TAURI__" in window;
 	const cacheKey = `${basePath}|${version}|${isDesktop}`;
 	if (cache.has(cacheKey)) return cache.get(cacheKey);
 

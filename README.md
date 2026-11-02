@@ -6,14 +6,14 @@
   <a href="https://github.com/nasedkinpv/numr-web/actions/workflows/ci.yml"><img src="https://github.com/nasedkinpv/numr-web/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
 </p>
 
-The web and desktop interface for [numr](https://github.com/nasedkinpv/numr), powered by the `numr-core` and `numr-editor` WebAssembly packages.
+The web interface for [numr](https://github.com/nasedkinpv/numr), powered by the `numr-core` and `numr-editor` WebAssembly packages. The desktop app in [numr-desktop](https://github.com/nasedkinpv/numr-desktop) wraps this same runtime in a Tauri shell.
 
 <p align="center">
   <strong><a href="https://numr.cc">Try it online →</a></strong>
 </p>
 
 <p align="center">
-  <img src="screenshots/numr-desktop-demo.gif" width="800" alt="numr desktop app evaluating finances, currencies, units, and statistics">
+  <img src="screenshots/numr-desktop-demo.gif" width="800" alt="numr evaluating finances, currencies, units, and statistics">
 </p>
 
 ## Features
@@ -24,14 +24,14 @@ The web and desktop interface for [numr](https://github.com/nasedkinpv/numr), po
 - Local persistence, self-contained share links, and `.numr` file import/export
 - Responsive line wrapping, optional line numbers, and aligned results
 - Reusable `<numr-calculator>` custom element with TypeScript declarations
-- Shared runtime for the web app and native Electrobun desktop shell
+- Shared runtime for the web app, the `<numr-calculator>` element, and the numr-desktop Tauri shell
 
 ## Web Component
 
 Use `<numr-calculator>` on any page:
 
 ```html
-<script type="module" src="https://numr.cc/numr-calculator.js?v=bbdfa91e6c"></script>
+<script type="module" src="https://numr.cc/numr-calculator.js?v=7ec675df95"></script>
 
 <numr-calculator autosave></numr-calculator>
 ```
@@ -68,7 +68,7 @@ calculator.decimalPlaces = undefined; // restore automatic formatting
 
 The `decimalPlaces` property accepts only integer numbers from 0 to 28 or `undefined`; invalid assignments throw `RangeError`. Invalid `decimal-places` attributes are rejected with a console warning and the previous valid attribute is restored. Precision is local to each component and is not loaded from or saved to the standalone app preference. It changes display rounding only, not stored arithmetic, content, selection, or undo history.
 
-The web and desktop footer provides the same precision setting (`Auto` restores the original value-specific formatting). This preference persists independently of the document; resetting it removes the saved override. Corrupt or unavailable storage falls back to `Auto`.
+The settings panel (gear button in the footer) holds line numbers, line wrapping, and the display precision; an empty precision field (`Auto`) restores the original value-specific formatting. This preference persists independently of the document; resetting it removes the saved override. Corrupt or unavailable storage falls back to `Auto`.
 
 The component emits:
 
@@ -139,20 +139,14 @@ npm run test:browser
 
 For JavaScript or CSS changes, `npm run build:frontend` rebuilds the browser bundles and asset stamps without rebuilding WASM.
 
-### Run the desktop app
+### Desktop surface
+
+`desktop/` holds the desktop HTML, its CSS overrides, and `desktop/index.js`, the bridge that connects the shared `app.js` to the Tauri shell through `window.__TAURI__`. The shell itself, packaging, and releases live in [numr-desktop](https://github.com/nasedkinpv/numr-desktop), which pins this repository as a git submodule. To run the desktop app against a local checkout:
 
 ```bash
-# Fast loop using the committed WASM packages
-npm run desktop:dev
-
-# Rebuild WASM first
-npm run desktop:dev:fresh
-
-# Reproducible stable package
-npm run desktop:build
+cd ../numr-desktop
+NUMR_WEB_DIR=../numr-web cargo tauri dev
 ```
-
-The desktop shell uses a frameless, rounded window and a tray menu. On macOS it runs as an accessory app without a Dock icon. Web and desktop settings persist independently in their respective storage origins.
 
 ## Architecture
 
@@ -174,7 +168,7 @@ numr-web/
 ├── app.js                    # Standalone app bundle
 ├── numr-calculator.js        # Reusable custom-element bundle
 ├── numr-calculator.d.ts      # TypeScript public interface
-├── desktop/                  # Electrobun assets
+├── desktop/                  # Desktop HTML, CSS, and Tauri bridge (used by numr-desktop)
 ├── src/
 │   ├── web/app.js            # Standalone and desktop product shell
 │   ├── component/            # Custom element

@@ -7,10 +7,6 @@ const cargoToml = await readFile(
 	new URL("../../Cargo.toml", import.meta.url),
 	"utf8",
 );
-const electrobunConfig = await readFile(
-	new URL("../electrobun.config.ts", import.meta.url),
-	"utf8",
-);
 const corePackage = JSON.parse(
 	await readFile(new URL("../pkg/core/package.json", import.meta.url), "utf8"),
 );
@@ -32,12 +28,6 @@ if (packageJson.version !== rustVersion) {
 	);
 }
 
-const desktopVersion = electrobunConfig.match(/\bversion:\s*"([^"]+)"/);
-if (!desktopVersion || desktopVersion[1] !== rustVersion) {
-	throw new Error(
-		`Version mismatch: numr=${rustVersion}, desktop=${desktopVersion?.[1] ?? "missing"}`,
-	);
-}
 
 for (const [name, version] of [
 	["generated core", corePackage.version],

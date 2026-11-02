@@ -61,7 +61,3 @@ body.desktop #btn-hide:active {
 	}
 }
 
-/* Electrobun's views:// loader does not resolve cache-busting queries. */
-body.desktop .logo::after {
-	background-image: url("numr-wordmark.svg");
-}

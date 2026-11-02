@@ -94,25 +94,23 @@ test("browser surfaces share the semantic color contract", async () => {
 });
 
 test("editor view toggles stay connected across public surfaces", async () => {
-	const [app, component, index, desktop, bunMain, nativeView] =
-		await Promise.all([
-			readFile(new URL("../app.js", import.meta.url), "utf8"),
-			readFile(new URL("../numr-calculator.js", import.meta.url), "utf8"),
-			readFile(new URL("../index.html", import.meta.url), "utf8"),
-			readFile(new URL("../desktop/index.html", import.meta.url), "utf8"),
-			readFile(new URL("../src/bun/index.ts", import.meta.url), "utf8"),
-			readFile(new URL("../src/mainview/index.ts", import.meta.url), "utf8"),
-		]);
+	const [app, component, index, desktop, bridge] = await Promise.all([
+		readFile(new URL("../app.js", import.meta.url), "utf8"),
+		readFile(new URL("../numr-calculator.js", import.meta.url), "utf8"),
+		readFile(new URL("../index.html", import.meta.url), "utf8"),
+		readFile(new URL("../desktop/index.html", import.meta.url), "utf8"),
+		readFile(new URL("../desktop/index.js", import.meta.url), "utf8"),
+	]);
 
-	assert.match(index, /id="btn-wrap"/);
-	assert.match(index, /id="btn-line-numbers"/);
-	assert.match(desktop, /id="btn-wrap"/);
-	assert.match(desktop, /id="btn-line-numbers"/);
+	assert.match(index, /id="setting-wrap"/);
+	assert.match(index, /id="setting-line-numbers"/);
+	assert.match(desktop, /id="setting-wrap"/);
+	assert.match(desktop, /id="setting-line-numbers"/);
 	assert.match(desktop, /id="btn-share"/);
-	assert.match(desktop, /<header class="electrobun-webkit-app-region-drag">/);
-	assert.match(desktop, /<div class="logo">[\s\S]*draggable="false"/);
-	assert.doesNotMatch(desktop, /class="logo[^"\n]*electrobun-webkit-app-region-no-drag/);
-	assert.match(desktop, /class="actions electrobun-webkit-app-region-no-drag"/);
+	assert.match(desktop, /<header data-tauri-drag-region>/);
+	assert.match(desktop, /<div class="logo" data-tauri-drag-region>[\s\S]*draggable="false"/);
+	assert.match(desktop, /<div class="actions">/);
+	assert.doesNotMatch(desktop, /class="actions[^"\n]*data-tauri-drag-region/);
 	assert.match(desktop, /id="btn-hide"[^>]*aria-label="Hide numr"/);
 	assert.match(buttonContent(desktop, "btn-hide"), /^<svg\b/);
 	assert.doesNotMatch(buttonContent(desktop, "btn-hide"), /[−–—]/);
@@ -123,28 +121,27 @@ test("editor view toggles stay connected across public surfaces", async () => {
 	for (const markup of [index, desktop]) {
 		const header = markup.match(/<header[\s\S]*?<\/header>/)?.[0] ?? "";
 		const footer = markup.match(/<footer[\s\S]*?<\/footer>/)?.[0] ?? "";
-		assert.doesNotMatch(header, /id="btn-wrap"/);
+		assert.doesNotMatch(header, /id="setting-wrap"/);
 		assert.doesNotMatch(header, /id="btn-rates"/);
 		assert.match(
 			footer,
-			/id="btn-line-numbers"[\s\S]*id="btn-wrap"[\s\S]*id="btn-rates"/,
+			/id="btn-settings" popovertarget="settings"[\s\S]*id="btn-rates"[\s\S]*id="settings" popover[\s\S]*id="setting-line-numbers"[\s\S]*id="setting-wrap"[\s\S]*id="decimal-places"/,
 		);
 		assert.match(markup, /numr-wordmark\.svg/);
-		assert.match(footer, /id="decimal-places"[^>]*aria-label="Decimal places"/);
-		assert.match(footer, /<option value="">Auto<\/option>/);
+		assert.match(footer, /<span>Decimal places<\/span>\s*<input id="decimal-places"/);
+		assert.match(footer, /id="decimal-places"[^>]*type="number"[^>]*placeholder="Auto"/);
 	}
-	for (const id of ["btn-share", "btn-new", "btn-save", "btn-wrap", "btn-rates"]) {
+	for (const id of ["btn-share", "btn-new", "btn-save", "btn-rates", "btn-settings"]) {
 		assert.equal(buttonContent(desktop, id), buttonContent(index, id));
 	}
 	assert.match(app, /numr-line-wrapping/);
 	assert.match(app, /numr-line-numbers/);
 	assert.match(component, /["']wrap["']/);
-	assert.match(bunMain, /toggle-line-wrapping/);
-	assert.match(bunMain, /numr-tray-template\.png/);
-	assert.match(bunMain, /numr-tray\.png/);
-	assert.match(bunMain, /numr-tray\.ico/);
-	assert.match(bunMain, /clipboardWriteText/);
-	assert.match(nativeView, /numrCopyText/);
+	assert.match(bridge, /numrCopyText/);
+	assert.match(bridge, /numrSaveDocument/);
+	assert.match(bridge, /toggle-line-wrapping/);
+	assert.match(bridge, /pending_documents/);
 	assert.match(app, /numrCopyText/);
-	assert.match(nativeView, /toggle-line-wrapping/);
+	assert.match(app, /numrSaveDocument/);
+	assert.match(app, /numrReady/);
 });
