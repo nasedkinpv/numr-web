@@ -13,7 +13,7 @@ The web interface for [numr](https://github.com/nasedkinpv/numr), powered by the
 </p>
 
 <p align="center">
-  <img src="screenshots/numr-desktop-demo.gif" width="800" alt="numr evaluating finances, currencies, units, and statistics">
+  <img src="screenshots/desktop-typing.gif" width="800" alt="numr evaluating finances, currencies, units, and statistics">
 </p>
 
 ## Features
