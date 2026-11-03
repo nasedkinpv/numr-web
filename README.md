@@ -31,7 +31,7 @@ The web interface for [numr](https://github.com/nasedkinpv/numr), powered by the
 Use `<numr-calculator>` on any page:
 
 ```html
-<script type="module" src="https://numr.cc/numr-calculator.js?v=652bb42bd7"></script>
+<script type="module" src="https://numr.cc/numr-calculator.js?v=f5f31cf33d"></script>
 
 <numr-calculator autosave></numr-calculator>
 ```

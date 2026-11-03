@@ -2,7 +2,7 @@
   "name": "numr-editor",
   "type": "module",
   "description": "Shared syntax highlighting and text primitives for numr frontends",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "license": "MIT",
   "repository": {
     "type": "git",
