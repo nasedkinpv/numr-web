@@ -140,6 +140,11 @@ test("editor view toggles stay connected across public surfaces", async () => {
 	assert.match(app, /numr-line-numbers/);
 	assert.match(component, /["']wrap["']/);
 	assert.match(bridge, /numrCopyText/);
+	assert.match(bridge, /save_document_as/);
+	assert.match(bridge, /numrDocumentIsDirty/);
+	assert.match(desktop, /id="document-name"/);
+	assert.match(app, /numr-document/);
+	assert.match(app, /numrSaveDocumentAs/);
 	assert.match(bridge, /numrSaveDocument/);
 	assert.match(bridge, /toggle-line-wrapping/);
 	assert.match(bridge, /pending_documents/);

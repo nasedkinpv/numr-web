@@ -236,6 +236,7 @@ function setupEventListeners() {
 // ============================================================================
 
 function handleDocumentChange(content) {
+	notifyDocument("change", content);
 	if (sharedDocumentActive) {
 		window.history.replaceState(
 			null,
@@ -297,10 +298,11 @@ function updateLineNumbersControl() {
 
 function newDocument() {
 	const content = editor.getContent();
-	if (
-		content &&
-		!confirm("Create new document? Unsaved changes will be lost.")
-	) {
+	const unsaved =
+		typeof window.numrDocumentIsDirty === "function"
+			? window.numrDocumentIsDirty()
+			: Boolean(content);
+	if (unsaved && !confirm("Create new document? Unsaved changes will be lost.")) {
 		return;
 	}
 	if (content.trim()) {
@@ -308,6 +310,14 @@ function newDocument() {
 	}
 	editor.setContent("");
 	editor.focus();
+	notifyDocument("new", "");
+}
+
+// Lets a host shell (numr-desktop) track the open file and its unsaved state.
+function notifyDocument(kind, content) {
+	window.dispatchEvent(
+		new CustomEvent("numr-document", { detail: { kind, content } }),
+	);
 }
 
 function saveFile() {
@@ -317,6 +327,19 @@ function saveFile() {
 		trackEvent("File Downloaded");
 		return;
 	}
+	downloadFile(content);
+}
+
+function saveFileAs() {
+	const content = editor.getContent();
+	if (typeof window.numrSaveDocumentAs === "function") {
+		window.numrSaveDocumentAs(content);
+		return;
+	}
+	downloadFile(content);
+}
+
+function downloadFile(content) {
 	const blob = new Blob([content], { type: "text/plain" });
 	const url = URL.createObjectURL(blob);
 
@@ -593,6 +616,7 @@ function updateRateStatus(status, timestamp = null) {
 window.numrActions = {
 	newDocument,
 	saveDocument: saveFile,
+	saveDocumentAs: saveFileAs,
 	publishDocument,
 	refreshRates: () => fetchRates("manual"),
 	toggleLineWrapping,

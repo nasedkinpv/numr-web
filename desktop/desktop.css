@@ -61,3 +61,24 @@ body.desktop #btn-hide:active {
 	}
 }
 
+/* Open file name and unsaved marker, between the logo and the actions. */
+body.desktop .document-name {
+	margin-left: 0.75rem;
+	margin-right: auto;
+	padding-top: 2px;
+	font-size: 0.8125rem;
+	color: var(--numr-text-muted);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	-webkit-user-select: none;
+	user-select: none;
+}
+
+body.desktop .document-name.untitled {
+	opacity: 0.6;
+}
+
+body.desktop .document-name.dirty {
+	color: var(--numr-text-primary);
+}
