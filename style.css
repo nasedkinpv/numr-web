@@ -78,38 +78,39 @@ header {
 .logo {
     display: flex;
     align-items: center;
+    position: relative;
+    height: 14px;
+    margin-top: 2px;
     margin-left: 0.125rem;
+    /* The wordmark masks the whole box, so the shimmer band below is clipped to the letters. */
+    -webkit-mask: url('numr-wordmark.svg?v=6e22619eeb') center / contain no-repeat;
+    mask: url('numr-wordmark.svg?v=6e22619eeb') center / contain no-repeat;
 }
 
 .logo img {
     height: 14px;
     width: auto;
-    margin-top: 2px;
     opacity: 0.82;
     transition: opacity 180ms ease;
 }
 
-/* A single, intentional shimmer pass on pointer hover. */
-.logo a, .logo {
-    position: relative;
-}
-
+/* A single, intentional shimmer pass on pointer hover: a static mask and a band that
+   only moves with transform, so engines composite it without repainting the SVG. */
 .logo::after {
     content: '';
     position: absolute;
-    inset: 0;
-    background: url('numr-wordmark.svg?v=6e22619eeb') center / contain no-repeat;
-    filter: brightness(1.28);
-    clip-path: polygon(-28% 0, -8% 0, 2% 100%, -18% 100%);
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 45%;
+    background: linear-gradient(100deg, transparent 0%, #fff 50%, transparent 100%);
+    transform: translateX(-100%);
     opacity: 0;
     pointer-events: none;
+    will-change: transform;
 }
 
 @media (hover: hover) and (pointer: fine) {
-    .logo:hover img {
-        opacity: 1;
-    }
-
     .logo:hover::after {
         animation: logo-shimmer 850ms linear;
     }
@@ -117,14 +118,12 @@ header {
 
 @keyframes logo-shimmer {
     0% {
-        clip-path: polygon(-28% 0, -8% 0, 2% 100%, -18% 100%);
-        opacity: 0;
+        transform: translateX(-100%);
+        opacity: 1;
     }
-    12% { opacity: 0.9; }
-    88% { opacity: 0.9; }
     100% {
-        clip-path: polygon(108% 0, 128% 0, 118% 100%, 98% 100%);
-        opacity: 0;
+        transform: translateX(320%);
+        opacity: 1;
     }
 }
 

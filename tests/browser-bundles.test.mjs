@@ -69,7 +69,9 @@ test("browser surfaces share the semantic color contract", async () => {
 	}
 	assert.match(desktopStyles, /var\(--numr-danger\)/);
 	assert.doesNotMatch(styles, /shimmer[^;]*infinite/);
-	assert.doesNotMatch(styles, /mask-image/);
+	assert.match(styles, /\.logo \{[^}]*mask: url\('numr-wordmark\.svg/);
+	assert.match(styles, /@keyframes logo-shimmer \{[^@]*transform: translateX/);
+	assert.doesNotMatch(styles, /@keyframes logo-shimmer \{[^@]*clip-path/);
 	assert.match(styles, /\.logo:hover::after[\s\S]*logo-shimmer 850ms linear/);
 	assert.match(styles, /prefers-reduced-motion: reduce/);
 	for (const token of [
