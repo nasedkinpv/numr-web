@@ -46,7 +46,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=8dec8a78b0" />
     <meta name="theme-color" content="#1a1c1e" />
 
-    <link rel="stylesheet" href="style.css?v=7e07f1ce14" />
+    <link rel="stylesheet" href="style.css?v=e2e89cb067" />
 
     <!-- Preload critical resources -->
     <link
@@ -131,6 +131,14 @@
             </svg>
           </button>
           <div id="settings" popover>
+            <div class="setting" role="group" aria-label="Theme">
+              <span>Theme</span>
+              <span class="segmented">
+                <label><input type="radio" name="theme" value="system" checked />System</label>
+                <label><input type="radio" name="theme" value="dark" />Dark</label>
+                <label><input type="radio" name="theme" value="light" />Light</label>
+              </span>
+            </div>
             <label class="setting">
               <span>Line numbers</span>
               <input id="setting-line-numbers" type="checkbox" role="switch" />
@@ -149,6 +157,6 @@
       </footer>
     </div>
 
-    <script type="module" src="app.js?v=81b753ad75"></script>
+    <script type="module" src="app.js?v=f85613397f"></script>
   </body>
 </html>

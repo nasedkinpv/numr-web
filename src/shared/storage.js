@@ -3,6 +3,7 @@ export const STORAGE_KEYS = Object.freeze({
 	lineWrapping: "numr-line-wrapping",
 	lineNumbers: "numr-line-numbers",
 	decimalPlaces: "numr-decimal-places",
+	theme: "numr-theme",
 	rates: "numr-rates",
 	ratesTimestamp: "numr-rates-timestamp",
 });

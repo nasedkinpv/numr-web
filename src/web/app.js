@@ -23,6 +23,34 @@ import { renderTokenTotals } from "../shared/token-view.js";
 import { loadDecimalPlaces, parseDecimalPlaces, saveDecimalPlaces } from "../shared/decimal-places.js";
 
 // ============================================================================
+// Theme (applied before anything renders)
+// ============================================================================
+
+const THEMES = ["system", "dark", "light"];
+
+function applyTheme(theme) {
+	if (theme === "system") delete document.documentElement.dataset.theme;
+	else document.documentElement.dataset.theme = theme;
+	const meta = document.querySelector('meta[name="theme-color"]');
+	if (meta) {
+		const dark =
+			theme === "dark" ||
+			(theme === "system" && !matchMedia("(prefers-color-scheme: light)").matches);
+		meta.content = dark ? "#1a1c1e" : "#fafafa";
+	}
+}
+
+function loadTheme() {
+	const stored = safeStorage.getItem(STORAGE_KEYS.theme);
+	return THEMES.includes(stored) ? stored : "system";
+}
+
+applyTheme(loadTheme());
+matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => {
+	applyTheme(loadTheme());
+});
+
+// ============================================================================
 // Constants
 // ============================================================================
 
@@ -80,6 +108,7 @@ const $ = {
 	lineWrapping: null,
 	lineNumbers: null,
 	decimalPlaces: null,
+	themeInputs: [],
 	btnShare: null,
 	btnNew: null,
 	btnSave: null,
@@ -155,6 +184,8 @@ async function init() {
 	$.lineWrapping = document.getElementById("setting-wrap");
 	$.lineNumbers = document.getElementById("setting-line-numbers");
 	$.decimalPlaces = document.getElementById("decimal-places");
+	$.themeInputs = Array.from(document.querySelectorAll('input[name="theme"]'));
+	for (const input of $.themeInputs) input.checked = input.value === loadTheme();
 	$.btnShare = document.getElementById("btn-share");
 	$.btnNew = document.getElementById("btn-new");
 	$.btnSave = document.getElementById("btn-save");
@@ -219,6 +250,14 @@ function setupEventListeners() {
 			console.warn("Invalid decimal places:", error);
 		}
 	});
+	for (const input of $.themeInputs) {
+		input.addEventListener("change", () => {
+			if (!input.checked) return;
+			if (input.value === "system") safeStorage.removeItem(STORAGE_KEYS.theme);
+			else safeStorage.setItem(STORAGE_KEYS.theme, input.value);
+			applyTheme(input.value);
+		});
+	}
 	$.lineWrapping?.addEventListener("change", () => setLineWrapping($.lineWrapping.checked));
 	$.lineNumbers?.addEventListener("change", () => setLineNumbers($.lineNumbers.checked));
 	$.btnRates.addEventListener("click", () => {

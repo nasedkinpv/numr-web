@@ -65,6 +65,14 @@
             </svg>
           </button>
           <div id="settings" popover>
+            <div class="setting" role="group" aria-label="Theme">
+              <span>Theme</span>
+              <span class="segmented">
+                <label><input type="radio" name="theme" value="system" checked />System</label>
+                <label><input type="radio" name="theme" value="dark" />Dark</label>
+                <label><input type="radio" name="theme" value="light" />Light</label>
+              </span>
+            </div>
             <label class="setting">
               <span>Line numbers</span>
               <input id="setting-line-numbers" type="checkbox" role="switch" />

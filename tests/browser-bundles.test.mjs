@@ -74,6 +74,8 @@ test("browser surfaces share the semantic color contract", async () => {
 	assert.doesNotMatch(styles, /@keyframes logo-shimmer \{[^@]*clip-path/);
 	assert.match(styles, /\.logo:hover::after[\s\S]*logo-shimmer 850ms linear/);
 	assert.match(styles, /prefers-reduced-motion: reduce/);
+	assert.match(styles, /:root\[data-theme="light"\] \{[^}]*--numr-bg-primary: #fafafa/);
+	assert.match(styles, /prefers-color-scheme: light/);
 	for (const token of [
 		"number",
 		"operator",
@@ -121,6 +123,7 @@ test("editor view toggles stay connected across public surfaces", async () => {
 		/id="btn-share"[\s\S]*id="btn-new"[\s\S]*id="btn-save"[\s\S]*id="btn-hide"/,
 	);
 	for (const markup of [index, desktop]) {
+		assert.match(markup, /input type="radio" name="theme" value="light"/);
 		const header = markup.match(/<header[\s\S]*?<\/header>/)?.[0] ?? "";
 		const footer = markup.match(/<footer[\s\S]*?<\/footer>/)?.[0] ?? "";
 		assert.doesNotMatch(header, /id="setting-wrap"/);
