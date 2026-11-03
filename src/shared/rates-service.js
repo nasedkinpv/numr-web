@@ -18,10 +18,14 @@ export class RatesService {
 			fiatUrl = DEFAULT_FIAT_RATES_URL,
 			cryptoUrl = DEFAULT_CRYPTO_RATES_URL,
 			requestTimeoutMs = 10_000,
+			store = null,
 		} = {},
 	) {
 		this.session = session;
 		this.storage = createSafeStorage(storage);
+		// Optional host-side cache shared with other numr frontends:
+		// { load(): Promise<{ rates, timestamp } | null>, save(rates, timestamp) }.
+		this.store = store;
 		this.fetchImpl = fetchImpl;
 		this.now = now;
 		this.cacheTtlMs = cacheTtlMs;
@@ -58,10 +62,36 @@ export class RatesService {
 
 	async initialize() {
 		if (this.disposed) throw new Error("Rates service has been disposed");
-		const cached = this.loadCached();
+		const cached = this.loadCached() ?? (await this.#loadStore());
 		return cached
 			? { status: "success", source: "cache", ...cached }
 			: this.refresh();
+	}
+
+	async #loadStore() {
+		if (!this.store?.load) return null;
+		try {
+			const entry = await this.store.load();
+			const rates = entry?.rates;
+			const timestamp = Number(entry?.timestamp);
+			const age = this.now() - timestamp;
+			if (
+				!rates ||
+				typeof rates !== "object" ||
+				!Object.keys(rates).length ||
+				!Number.isFinite(timestamp) ||
+				age < 0 ||
+				age >= this.cacheTtlMs
+			) {
+				return null;
+			}
+			if (this.disposed) return null;
+			this.session.applyRates(rates);
+			this.#store(rates, timestamp, { share: false });
+			return { rates, timestamp };
+		} catch {
+			return null;
+		}
 	}
 
 	refresh() {
@@ -157,8 +187,13 @@ export class RatesService {
 		this.controllers.clear();
 	}
 
-	#store(rates, timestamp) {
+	#store(rates, timestamp, { share = true } = {}) {
 		this.storage.setItem(STORAGE_KEYS.rates, JSON.stringify(rates));
 		this.storage.setItem(STORAGE_KEYS.ratesTimestamp, timestamp);
+		if (share && this.store?.save) {
+			Promise.resolve()
+				.then(() => this.store.save(rates, timestamp))
+				.catch((error) => console.warn("Failed to share rates:", error));
+		}
 	}
 }

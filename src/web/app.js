@@ -131,7 +131,7 @@ async function initWasm() {
 	session = await NumrSession.create({
 		version: WASM_ASSET_VERSION,
 	});
-	ratesService = new RatesService(session);
+	ratesService = new RatesService(session, { store: window.numrRatesStore });
 	initializeRates();
 }
 

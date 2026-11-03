@@ -112,3 +112,39 @@ test("disposing cancels refresh before rates reach the WASM session", async () =
 	await assert.rejects(refresh, /aborted|cancelled/);
 	assert.deepEqual(target.applied, []);
 });
+
+test("uses a fresh shared store entry and mirrors it locally without re-sharing", async () => {
+	const storage = new MemoryStorage();
+	const target = session();
+	const saved = [];
+	const store = {
+		load: async () => ({ rates: { EUR: 0.8 }, timestamp: 1200 }),
+		save: (rates, timestamp) => saved.push([rates, timestamp]),
+	};
+	const service = new RatesService(target, { storage, store, now: () => 1500 });
+	const result = await service.initialize();
+	assert.equal(result.source, "cache");
+	assert.deepEqual(target.applied, [{ EUR: 0.8 }]);
+	assert.equal(String(storage.getItem("numr-rates-timestamp")), "1200");
+	assert.deepEqual(saved, []);
+});
+
+test("ignores a stale shared store entry and shares fresh network rates", async () => {
+	const storage = new MemoryStorage();
+	const target = session();
+	const saved = [];
+	const store = {
+		load: async () => ({ rates: { EUR: 0.8 }, timestamp: 0 }),
+		save: (rates, timestamp) => saved.push([rates, timestamp]),
+	};
+	const fetchImpl = async (url) =>
+		String(url).includes("open.er-api")
+			? response({ rates: { EUR: 0.9 } })
+			: response({ bitcoin: { usd: 50000 } });
+	const now = 60 * 60 * 1000 + 5;
+	const service = new RatesService(target, { storage, store, fetchImpl, now: () => now });
+	const result = await service.initialize();
+	await new Promise((resolve) => setTimeout(resolve, 0));
+	assert.equal(result.source, "network");
+	assert.deepEqual(saved, [[{ EUR: 0.9, BTC: 50000 }, now]]);
+});

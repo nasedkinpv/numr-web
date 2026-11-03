@@ -3,6 +3,13 @@
 const { core, event, clipboardManager, opener } = window.__TAURI__;
 const tauriWindow = window.__TAURI__.window.getCurrentWindow();
 
+// Exchange-rate cache shared with the numr TUI/CLI (~/.config/numr/rates.json).
+// Set synchronously: app.js reads it when it builds its RatesService.
+window.numrRatesStore = {
+	load: () => core.invoke("shared_rates"),
+	save: (rates, timestamp) => core.invoke("store_shared_rates", { rates, timestamp }),
+};
+
 // ---------------------------------------------------------------------------
 // Open file and unsaved state
 // ---------------------------------------------------------------------------

@@ -144,6 +144,8 @@ test("editor view toggles stay connected across public surfaces", async () => {
 	assert.match(component, /["']wrap["']/);
 	assert.match(bridge, /numrCopyText/);
 	assert.match(bridge, /save_document_as/);
+	assert.match(bridge, /numrRatesStore/);
+	assert.match(app, /store:\s*window\.numrRatesStore/);
 	assert.match(bridge, /numrDocumentIsDirty/);
 	assert.match(desktop, /id="document-name"/);
 	assert.match(app, /numr-document/);
