@@ -11,6 +11,7 @@
  */
 
 import { NumrEditor } from "../shared/numr-editor.js";
+import { manageViewport } from "./viewport.js";
 import { NumrSession } from "../shared/numr-session.js";
 import { RatesService } from "../shared/rates-service.js";
 import {
@@ -177,6 +178,10 @@ async function fetchRates(source = "auto") {
  * Main initialization - called on page load
  */
 async function init() {
+	// The shared desktop entrypoint and embedded component do not own the page.
+	if (document.querySelector("[data-web-viewport]")) {
+		manageViewport(window, document.documentElement.style, () => editor?.revealSelection());
+	}
 	// Cache DOM references
 	$.editorHost = document.getElementById("editor");
 	$.totals = document.getElementById("totals");
@@ -228,8 +233,8 @@ async function init() {
 	});
 	updateLineWrappingControl();
 	updateLineNumbersControl();
-	// Focus editor
-	editor.focus();
+	// Touch devices should not open the keyboard before an explicit tap.
+	if (!matchMedia("(any-pointer: coarse)").matches) editor.focus();
 
 	// Setup button event listeners
 	setupEventListeners();

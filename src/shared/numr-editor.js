@@ -273,6 +273,11 @@ const editorTheme = EditorView.theme(
 			fontSize: "var(--numr-font-size, 14px)",
 		},
 		"&.cm-focused": { outline: "none" },
+		// Safari zooms small editable text on focus. Keep both gutters on the
+		// same metrics, including in embedded components with compact host fonts.
+		"@media (any-pointer: coarse)": {
+			".cm-scroller": { fontSize: "max(16px, var(--numr-font-size, 14px))" },
+		},
 		".cm-scroller": {
 			overflow: "auto",
 			fontFamily:
@@ -539,6 +544,13 @@ export class NumrEditor {
 
 	focus() {
 		this.view.focus();
+	}
+
+	revealSelection() {
+		if (this.destroyed || !this.view.hasFocus) return;
+		this.view.dispatch({
+			effects: EditorView.scrollIntoView(this.view.state.selection.main, { y: "nearest" }),
+		});
 	}
 
 	destroy() {
