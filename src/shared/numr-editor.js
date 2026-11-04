@@ -546,10 +546,24 @@ export class NumrEditor {
 		this.view.focus();
 	}
 
-	revealSelection() {
+	// A shrinking standalone shell may cover the caret. Do not dispatch
+	// scrollIntoView here: it can scroll ancestors and pan the visual viewport.
+	revealCaretInScroller() {
 		if (this.destroyed || !this.view.hasFocus) return;
-		this.view.dispatch({
-			effects: EditorView.scrollIntoView(this.view.state.selection.main, { y: "nearest" }),
+		this.view.requestMeasure({
+			key: this,
+			read: (view) => {
+				if (this.destroyed || !view.hasFocus) return 0;
+				const caret = view.coordsAtPos(view.state.selection.main.head);
+				const scroller = view.scrollDOM.getBoundingClientRect();
+				if (!caret) return 0;
+				// WebKit rounds scrollTop to whole CSS pixels; round outward so
+				// a fractional flex height cannot leave the caret clipped.
+				return Math.max(0, Math.ceil(caret.bottom - scroller.bottom));
+			},
+			write: (delta, view) => {
+				if (!this.destroyed && view.hasFocus && delta > 0) view.scrollDOM.scrollTop += delta;
+			},
 		});
 	}
 

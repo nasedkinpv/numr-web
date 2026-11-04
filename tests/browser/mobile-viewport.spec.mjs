@@ -12,6 +12,7 @@ async function shellBounds(page, top, height) {
 		const r = el.getBoundingClientRect(); return [r.top, r.height];
 	})).toEqual([top, height]);
 	const footer = await page.locator("footer").boundingBox();
+	expect((await page.locator("header").boundingBox()).y).toBe(top);
 	expect(footer.y + footer.height).toBeCloseTo(top + height, 0);
 	const scroll = await page.locator(".cm-scroller").boundingBox();
 	expect(scroll.height).toBeGreaterThan(0);
@@ -46,6 +47,9 @@ test.describe("touch text entry", () => {
 	test("fonts, gutters, settings and controls fit without startup focus or horizontal page overflow", async ({ page }) => {
 		await start(page);
 		await expect(page.locator(".cm-content")).not.toBeFocused();
+		// Playwright's Linux WebKit emulates coarse input but reports zero
+		// maxTouchPoints; this is not physical iPhone keyboard coverage.
+		expect(await page.evaluate(() => matchMedia("(any-pointer: coarse)").matches)).toBe(true);
 		await page.locator(".cm-content").tap();
 		await expect(page.locator(".cm-content")).toBeFocused();
 		for (const selector of [".cm-content", ".cm-gutters", ".numr-results", ".numr-line-numbers"]) {
@@ -84,31 +88,31 @@ test.describe("touch text entry", () => {
 		await page.keyboard.press("End"); await page.keyboard.type(" + 4");
 		await expect(editor).toHaveText("1 + 2 + 4");
 		const selection = await page.evaluate(() => getSelection().focusOffset);
-		await geometry(page, 390, 45); await shellBounds(page, 45, 390);
+		await geometry(page, 390, 45); await shellBounds(page, 0, 390);
 		expect(await page.evaluate(() => getSelection().focusOffset)).toBe(selection);
 		await expect(editor).toHaveText("1 + 2 + 4");
 		await page.keyboard.press("ControlOrMeta+z"); await expect(editor).toHaveText("1 + 2");
 		await page.locator("#btn-settings").tap();
 		await page.locator("#decimal-places").fill("3");
-		await geometry(page, 310, 70); await shellBounds(page, 70, 310);
+		await geometry(page, 310, 70); await shellBounds(page, 0, 310);
 		let panel = await page.locator("#settings").boundingBox();
-		expect(panel.y).toBeGreaterThanOrEqual(70);
-		expect(panel.y + panel.height).toBeLessThanOrEqual(380);
-		await geometry(page, 160, 30); await shellBounds(page, 30, 160);
+		expect(panel.y).toBeGreaterThanOrEqual(0);
+		expect(panel.y + panel.height).toBeLessThanOrEqual(310);
+		await geometry(page, 160, 30); await shellBounds(page, 0, 160);
 		panel = await page.locator("#settings").boundingBox();
-		expect(panel.y).toBeGreaterThanOrEqual(30);
+		expect(panel.y).toBeGreaterThanOrEqual(0);
 		expect(await page.locator("#settings").evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
 		await page.locator("#decimal-places").scrollIntoViewIfNeeded();
 		await expect(page.locator("#decimal-places")).toBeInViewport();
 		await geometry(page, 80, 90, 2);
-		await page.waitForTimeout(60); await shellBounds(page, 30, 160);
+		await page.waitForTimeout(60); await shellBounds(page, 0, 160);
 		expect(await page.locator(".container").evaluate((el) => el.getBoundingClientRect().width)).toBe(390);
 		await geometry(page, 844); await shellBounds(page, 0, 844);
 		// BFcache restores the same app instance: its viewport listeners resume.
 		await page.evaluate(() => dispatchEvent(new Event("pagehide")));
 		await geometry(page, 500, 10);
 		await page.evaluate(() => dispatchEvent(new Event("pageshow")));
-		await shellBounds(page, 10, 500);
+		await shellBounds(page, 0, 500);
 		await geometry(page, 844); await shellBounds(page, 0, 844);
 		await expect.poll(() => page.evaluate(() => localStorage.getItem("numr-document"))).toBe("1 + 2");
 		await page.reload(); await page.evaluate(() => window.numrReady);
@@ -116,24 +120,36 @@ test.describe("touch text entry", () => {
 		await page.locator("#btn-settings").tap(); await expect(page.locator("#decimal-places")).toHaveValue("3");
 	});
 
-	test("layout scrolling does not displace the shell from the synthetic visual viewport", async ({ page }) => {
+	test("pan notifications do not move the header, mutate layout, or pull a manually scrolled editor to its caret", async ({ page }) => {
 		await page.addInitScript(() => {
 			Object.defineProperty(window, "visualViewport", { configurable: true,
 				value: Object.assign(new EventTarget(), { height: 844, offsetTop: 0, scale: 1 }) });
 		});
 		await start(page);
-		await geometry(page, 320, 40); await shellBounds(page, 40, 320);
-		// Exercise real document scrolling as well as synthetic keyboard geometry.
+		await page.locator(".cm-content").fill(Array.from({ length: 60 }, (_, i) => `${i} + 1`).join("\n"));
+		await page.keyboard.press("ControlOrMeta+End");
+		await geometry(page, 320); await shellBounds(page, 0, 320);
+		await page.waitForTimeout(100);
 		await page.evaluate(() => {
-			document.documentElement.style.height = "1800px";
-			window.scrollTo(0, 100);
+			document.querySelector(".cm-scroller").scrollTop = 100;
+			window.layoutWrites = 0;
+			new MutationObserver((records) => window.layoutWrites += records.length)
+				.observe(document.documentElement, { attributes: true, attributeFilter: ["style"] });
 		});
-		await expect.poll(() => page.evaluate(() => scrollY)).toBe(100);
-		await shellBounds(page, 40, 320);
+		for (const offset of [40, 80, 20, 0]) {
+			await geometry(page, 320, offset);
+			await page.evaluate(() => dispatchEvent(new Event("scroll")));
+			await page.waitForTimeout(40);
+			await shellBounds(page, 0, 320);
+			expect(await page.locator(".cm-scroller").evaluate((el) => el.scrollTop)).toBe(100);
+		}
+		expect(await page.evaluate(() => window.layoutWrites)).toBe(0);
+		expect(await page.evaluate(() => scrollY)).toBe(0);
+		expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight)).toBe(true);
 		await page.locator("#btn-settings").tap();
 		const panel = await page.locator("#settings").boundingBox();
-		expect(panel.y).toBeGreaterThanOrEqual(40);
-		expect(panel.y + panel.height).toBeLessThanOrEqual(360);
+		expect(panel.y).toBeGreaterThanOrEqual(0);
+		expect(panel.y + panel.height).toBeLessThanOrEqual(320);
 	});
 
 	test("caret stays in the editor scroll area after synthetic keyboard shrink", async ({ page }) => {
@@ -144,7 +160,7 @@ test.describe("touch text entry", () => {
 		await start(page);
 		await page.locator(".cm-content").fill(Array.from({ length: 60 }, (_, i) => `${i} + 1`).join("\n"));
 		await page.keyboard.press("ControlOrMeta+End");
-		await geometry(page, 320, 40); await shellBounds(page, 40, 320);
+		await geometry(page, 320, 40); await shellBounds(page, 0, 320);
 		await expect.poll(() => page.evaluate(() => {
 			const selection = getSelection();
 			if (!selection.rangeCount) return false;
@@ -152,6 +168,42 @@ test.describe("touch text entry", () => {
 			const scroll = document.querySelector(".cm-scroller").getBoundingClientRect();
 			return caret.top >= scroll.top && caret.bottom <= scroll.bottom;
 		})).toBe(true);
+	});
+
+	test("real layout resize keeps caret visible without ancestor scroll requests or document changes", async ({ page }) => {
+		await start(page);
+		const editor = page.locator(".cm-content");
+		await editor.fill(Array.from({ length: 60 }, (_, i) => `${i} + 1`).join("\n"));
+		await page.keyboard.press("ControlOrMeta+End");
+		await page.waitForTimeout(100);
+		await page.evaluate(() => {
+			window.ancestorScrollRequests = 0;
+			window.documentChanges = 0;
+			addEventListener("numr-document", () => window.documentChanges++);
+			for (const [object, name] of [[window, "scrollBy"], [window, "scrollTo"], [Element.prototype, "scrollIntoView"]]) {
+				const original = object[name];
+				object[name] = function (...args) {
+					window.ancestorScrollRequests++;
+					return original.apply(this, args);
+				};
+			}
+		});
+		for (const height of [320, 844, 390, 844]) {
+			// Real browser resize/ResizeObserver/CodeMirror measurement, not an
+			// OS keyboard animation. No fabricated viewport offsets here.
+			await page.setViewportSize({ width: 390, height });
+			await shellBounds(page, 0, height);
+			await expect(editor).toBeFocused();
+			await expect.poll(() => page.evaluate(() => {
+				const caret = getSelection().getRangeAt(0).getBoundingClientRect();
+				const box = document.querySelector(".cm-scroller").getBoundingClientRect();
+				return caret.top >= box.top && caret.bottom <= box.bottom;
+			})).toBe(true);
+			expect(await page.evaluate(() => scrollY)).toBe(0);
+		}
+		expect(await page.evaluate(() => [window.ancestorScrollRequests, window.documentChanges])).toEqual([0, 0]);
+		await page.keyboard.type(" + 2");
+		await expect(editor).toContainText("59 + 1 + 2");
 	});
 
 	test("narrow and landscape layouts keep controls and settings inside the page", async ({ page }) => {

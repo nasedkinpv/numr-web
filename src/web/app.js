@@ -180,7 +180,7 @@ async function fetchRates(source = "auto") {
 async function init() {
 	// The shared desktop entrypoint and embedded component do not own the page.
 	if (document.querySelector("[data-web-viewport]")) {
-		manageViewport(window, document.documentElement.style, () => editor?.revealSelection());
+		manageViewport(window, document.documentElement.style, () => editor?.revealCaretInScroller());
 	}
 	// Cache DOM references
 	$.editorHost = document.getElementById("editor");

@@ -13,12 +13,14 @@ function harness(withViewport = true) {
 	window.requestAnimationFrame = (callback) => { frames.set(++next, callback); return next; };
 	window.cancelAnimationFrame = (id) => frames.delete(id);
 	const values = new Map();
-	const style = { setProperty: (k, v) => values.set(k, v), removeProperty: (k) => values.delete(k) };
+	let writes = 0;
+	const style = { setProperty: (k, v) => { writes++; values.set(k, v); }, removeProperty: (k) => values.delete(k) };
 	let changes = 0;
 	const dispose = manageViewport(window, style, () => changes++);
 	return {
 		window, viewport: window.visualViewport, frames, values, dispose,
 		get changes() { return changes; },
+		get writes() { return writes; },
 		flush() { const pending = [...frames.values()]; frames.clear(); pending.forEach((fn) => fn()); },
 		event(target, name) { target.dispatchEvent(new Event(name)); },
 		geometry(height, offsetTop = 0, scale = 1) {
@@ -32,36 +34,38 @@ function harness(withViewport = true) {
 test("an already reduced viewport is used on the first scheduled frame", () => {
 	const h = harness();
 	h.geometry(420, 60); h.flush();
-	assert.equal(h.changes, 1);
+	assert.equal(h.changes, 0);
 	assert.equal(h.values.get("--numr-viewport-height"), "420px");
-	assert.equal(h.values.get("--numr-viewport-top"), "60px");
+	assert.equal(h.values.size, 1);
 	h.dispose();
 });
 
-test("viewport initializes, shrinks, follows keyboard pan, and restores", () => {
+test("only shrinking height requests editor-local caret correction", () => {
 	const h = harness();
 	h.flush();
 	assert.equal(h.values.get("--numr-viewport-height"), "800px");
 	h.geometry(420, 60); h.flush();
 	assert.equal(h.values.get("--numr-viewport-height"), "420px");
-	assert.equal(h.values.get("--numr-viewport-top"), "60px");
-	assert.equal(h.values.get("--numr-viewport-bottom"), "320px");
+	assert.equal(h.changes, 1);
 	h.geometry(800); h.flush();
-	assert.equal(h.values.get("--numr-viewport-top"), "0px");
-	assert.equal(h.values.get("--numr-viewport-bottom"), "0px");
+	assert.equal(h.values.get("--numr-viewport-height"), "800px");
+	assert.equal(h.changes, 1);
 	h.dispose();
 });
 
-test("layout scrolling keeps the absolute shell aligned without moving the fixed popover", () => {
+test("native pan and document scroll cannot schedule layout work or caret scrolling", () => {
 	const h = harness();
 	h.geometry(420, 60); h.flush();
-	h.window.scrollY = 100;
-	h.event(h.window, "scroll"); h.flush();
-	assert.equal(h.values.get("--numr-viewport-top"), "160px");
-	assert.equal(h.values.get("--numr-viewport-bottom"), "320px");
-	h.window.scrollY = 0;
-	h.event(h.window, "scroll"); h.flush();
-	assert.equal(h.values.get("--numr-viewport-top"), "60px");
+	for (const offset of [100, 200, 50, 0]) {
+		h.window.scrollY = offset;
+		h.viewport.offsetTop = offset;
+		h.event(h.window, "scroll"); h.event(h.viewport, "scroll");
+		assert.equal(h.frames.size, 0);
+		// Some engines send resize alongside pan despite unchanged height.
+		h.event(h.viewport, "resize"); h.flush();
+	}
+	assert.equal(h.writes, 1);
+	assert.equal(h.changes, 0);
 	h.dispose(); h.event(h.window, "scroll");
 	assert.equal(h.frames.size, 0);
 });
@@ -73,7 +77,7 @@ test("pinch zoom leaves the last unzoomed layout alone, including pan", () => {
 		h.geometry(300, 90, scale); h.event(h.viewport, "scroll"); h.flush();
 		assert.deepEqual([...h.values], before);
 	}
-	assert.equal(h.changes, 1);
+	assert.equal(h.changes, 0);
 	h.geometry(650); h.flush();
 	assert.equal(h.values.get("--numr-viewport-height"), "650px");
 	h.dispose();
@@ -92,11 +96,12 @@ test("events coalesce, unchanged geometry does not write, orientation reads late
 	h.geometry(400); h.geometry(450, 20);
 	h.event(h.viewport, "scroll"); h.event(h.window, "resize");
 	assert.equal(h.frames.size, 1); h.flush();
-	assert.equal(h.changes, 2);
+	assert.equal(h.changes, 1);
 	h.event(h.viewport, "scroll"); h.flush();
-	assert.equal(h.changes, 2);
+	assert.equal(h.changes, 1);
+	assert.equal(h.writes, 2);
 	h.window.innerHeight = 390; h.geometry(300); h.event(h.window, "resize"); h.flush();
-	assert.equal(h.values.get("--numr-viewport-bottom"), "90px");
+	assert.equal(h.values.get("--numr-viewport-height"), "300px");
 	h.dispose();
 });
 
@@ -117,9 +122,9 @@ test("pagehide cancels work; pageshow resumes once for BFcache; dispose removes 
 
 test("invalid transient geometry is ignored", () => {
 	const h = harness(); h.flush();
-	for (const [height, top] of [[0, 0], [NaN, 0], [400, NaN]]) {
+	for (const [height, top] of [[0, 0], [NaN, 0], [Infinity, 0], [-1, 0]]) {
 		h.geometry(height, top); h.flush();
-		assert.equal(h.changes, 1);
+		assert.equal(h.writes, 1);
 	}
 	h.dispose();
 });
